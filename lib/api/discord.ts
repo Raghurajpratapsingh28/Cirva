@@ -119,7 +119,10 @@ class DiscordAPI {
     }
     
     // Score from account age (estimated from Discord ID)
-    const accountCreated = new Date(Number(BigInt(user.id) >> 22n) + 1420070400000);
+    const DISCORD_EPOCH = 1420070400000;
+    const snowflake = BigInt(user.id);
+    const timestamp = Number(snowflake >> BigInt(22)) + DISCORD_EPOCH;
+    const accountCreated = new Date(timestamp);
     const accountAge = (Date.now() - accountCreated.getTime()) / (1000 * 60 * 60 * 24 * 365);
     score += Math.min(accountAge * 30, 150);
     

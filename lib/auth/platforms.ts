@@ -151,7 +151,7 @@ class PlatformAuth {
       }
 
       // Get code verifier for PKCE (Twitter)
-      const codeVerifier = oauthManager.getCodeVerifier(platform);
+      const codeVerifier = oauthManager.getCodeVerifier(platform) || undefined;
 
       // Exchange code for access token
       const tokenResponse = await oauthManager.exchangeCodeForToken(

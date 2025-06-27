@@ -6,8 +6,8 @@ import * as ProgressPrimitive from '@radix-ui/react-progress';
 import { cn } from '@/lib/utils';
 
 const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { value?: number | null }
 >(({ className, value, ...props }, ref) => (
   <ProgressPrimitive.Root
     ref={ref}
@@ -15,6 +15,7 @@ const Progress = React.forwardRef<
       'relative h-4 w-full overflow-hidden rounded-full bg-secondary',
       className
     )}
+    value={value}
     {...props}
   >
     <ProgressPrimitive.Indicator

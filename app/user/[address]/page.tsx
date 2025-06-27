@@ -179,3 +179,12 @@ export default async function ProfilePage({ params }: PageProps) {
     </div>
   );
 }
+
+// Required for static export with dynamic routes
+export async function generateStaticParams() {
+  // In a real app, fetch a list of addresses from your data source
+  return [
+    { address: '0x1234567890abcdef1234' },
+    { address: '0xabcdef1234567890abcd' },
+  ];
+}
