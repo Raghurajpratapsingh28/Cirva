@@ -1,0 +1,208 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { 
+  Github, 
+  MessageCircle, 
+  Twitter,
+  ExternalLink,
+  Loader2,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
+import { oauthManager } from '@/lib/auth/oauth';
+import { toast } from 'sonner';
+
+interface Platform {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  status: 'verified' | 'pending' | 'unverified';
+  points: number;
+  color: string;
+}
+
+interface OAuthVerificationButtonProps {
+  platform: Platform;
+  onVerificationStart?: () => void;
+  onVerificationComplete?: (success: boolean, data?: any) => void;
+}
+
+export function OAuthVerificationButton({ 
+  platform, 
+  onVerificationStart,
+  onVerificationComplete 
+}: OAuthVerificationButtonProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleOAuthLogin = async () => {
+    if (platform.status === 'verified') {
+      toast.info(`${platform.name} is already verified`);
+      return;
+    }
+
+    setIsLoading(true);
+    onVerificationStart?.();
+
+    try {
+      // Generate state and code verifier for security
+      const state = oauthManager.generateState();
+      let codeVerifier: string | undefined;
+      let codeChallenge: string | undefined;
+
+      // Use PKCE for Twitter OAuth 2.0
+      if (platform.id === 'twitter') {
+        codeVerifier = oauthManager.generateCodeVerifier();
+        codeChallenge = await oauthManager.generateCodeChallenge(codeVerifier);
+      }
+
+      // Store OAuth state and verifier
+      oauthManager.storeOAuthState(platform.id, state, codeVerifier);
+
+      // Get authorization URL
+      const authUrl = oauthManager.getAuthUrl(platform.id, state, codeChallenge);
+
+      // Open OAuth popup or redirect
+      const popup = window.open(
+        authUrl,
+        `${platform.id}_oauth`,
+        'width=600,height=700,scrollbars=yes,resizable=yes'
+      );
+
+      if (!popup) {
+        // Fallback to redirect if popup is blocked
+        window.location.href = authUrl;
+        return;
+      }
+
+      // Monitor popup for completion
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          setIsLoading(false);
+          
+          // Check for verification result in URL parameters
+          const urlParams = new URLSearchParams(window.location.search);
+          const success = urlParams.get('success') === 'true';
+          const platformParam = urlParams.get('platform');
+          
+          if (success && platformParam === platform.id) {
+            const username = urlParams.get('username');
+            const score = urlParams.get('score');
+            
+            toast.success(`${platform.name} verified successfully!`);
+            onVerificationComplete?.(true, { username, score });
+            
+            // Clean up URL parameters
+            window.history.replaceState({}, '', window.location.pathname);
+          } else if (urlParams.get('error')) {
+            const error = urlParams.get('error');
+            toast.error(`Verification failed: ${error}`);
+            onVerificationComplete?.(false, { error });
+            
+            // Clean up URL parameters
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }
+      }, 1000);
+
+      // Cleanup after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkClosed);
+        if (!popup.closed) {
+          popup.close();
+        }
+        setIsLoading(false);
+      }, 300000);
+
+    } catch (error) {
+      console.error(`OAuth error for ${platform.name}:`, error);
+      toast.error(`Failed to start ${platform.name} verification`);
+      setIsLoading(false);
+      onVerificationComplete?.(false, { error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (platform.status) {
+      case 'verified':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'pending':
+        return <Loader2 className="w-4 h-4 text-yellow-500 animate-spin" />;
+      case 'unverified':
+        return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
+    }
+  };
+
+  const getStatusBadge = () => {
+    switch (platform.status) {
+      case 'verified':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">Verified</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">Pending</Badge>;
+      case 'unverified':
+        return <Badge variant="outline">Not Verified</Badge>;
+    }
+  };
+
+  const getButtonText = () => {
+    if (isLoading) return 'Connecting...';
+    if (platform.status === 'verified') return 'Manage Verification';
+    if (platform.status === 'pending') return 'Verification Pending';
+    return `Connect ${platform.name}`;
+  };
+
+  return (
+    <div className="p-6 border rounded-lg hover:shadow-lg transition-all duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className={`p-3 rounded-lg bg-gradient-to-r ${platform.color} text-white`}>
+            {platform.icon}
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-lg">{platform.name}</h3>
+              {getStatusIcon()}
+            </div>
+            <div className="flex items-center space-x-2 mt-1">
+              {getStatusBadge()}
+              <Badge variant="secondary" className="text-xs">
+                +{platform.points} pts
+              </Badge>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-muted-foreground text-sm mb-4">
+        {platform.description}
+      </p>
+
+      <Button
+        onClick={handleOAuthLogin}
+        disabled={isLoading || platform.status === 'pending'}
+        className="w-full"
+        variant={platform.status === 'verified' ? 'outline' : 'default'}
+      >
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <ExternalLink className="w-4 h-4 mr-2" />
+        )}
+        {getButtonText()}
+      </Button>
+
+      {platform.status === 'verified' && (
+        <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">
+          <div className="flex items-center space-x-2 text-sm text-green-700 dark:text-green-400">
+            <CheckCircle className="w-4 h-4" />
+            <span>Successfully verified and earning reputation points</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
