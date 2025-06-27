@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -41,6 +42,8 @@ interface Platform {
   status: 'verified' | 'pending' | 'unverified';
   points: number;
   color: string;
+  username?: string;
+  profileUrl?: string;
 }
 
 export default function VerifyPage() {
@@ -103,6 +106,44 @@ export default function VerifyPage() {
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
+
+  useEffect(() => {
+    if (!address) return;
+    // Fetch user profile from backend
+    fetch(`/api/user/profile?publicKey=${address}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setPlatforms(prev => prev.map(p => {
+            if (p.id === 'github') {
+              return {
+                ...p,
+                status: data.isVerifiedGithub ? 'verified' : 'unverified',
+                username: data.githubUsername,
+                profileUrl: data.githubUsername ? `https://github.com/${data.githubUsername}` : undefined,
+              };
+            }
+            if (p.id === 'discord') {
+              return {
+                ...p,
+                status: data.isVerifiedDiscord ? 'verified' : 'unverified',
+                username: data.discordUsername,
+                profileUrl: data.discordUsername ? `https://discord.com/users/${data.discordUsername}` : undefined,
+              };
+            }
+            if (p.id === 'twitter') {
+              return {
+                ...p,
+                status: data.isVerifiedTwitter ? 'verified' : 'unverified',
+                username: data.twitterUsername,
+                profileUrl: data.twitterUsername ? `https://twitter.com/${data.twitterUsername}` : undefined,
+              };
+            }
+            return p;
+          }));
+        }
+      });
+  }, [address]);
 
   const handleVerificationComplete = (platformId: string, success: boolean, data?: any) => {
     if (success) {
@@ -198,6 +239,17 @@ export default function VerifyPage() {
                 handleVerificationComplete(platform.id, success, data)
               }
             />
+            {platform.status === 'verified' && platform.username && platform.profileUrl && (
+              <Button
+                asChild
+                className="mt-2 w-full"
+                variant="outline"
+              >
+                <a href={platform.profileUrl} target="_blank" rel="noopener noreferrer">
+                  Go to {platform.name} Profile
+                </a>
+              </Button>
+            )}
           </motion.div>
         ))}
       </motion.div>

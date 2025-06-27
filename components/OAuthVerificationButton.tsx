@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { oauthManager } from '@/lib/auth/oauth';
 import { toast } from 'sonner';
+import { useAccount } from 'wagmi';
 
 interface Platform {
   id: string;
@@ -37,6 +38,7 @@ export function OAuthVerificationButton({
   onVerificationComplete 
 }: OAuthVerificationButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { address } = useAccount();
 
   const handleOAuthLogin = async () => {
     if (platform.status === 'verified') {
@@ -49,7 +51,9 @@ export function OAuthVerificationButton({
 
     try {
       // Generate state and code verifier for security
-      const state = oauthManager.generateState();
+      const randomState = oauthManager.generateState();
+      // Encode publicKey in state
+      const state = address ? `publicKey:${address}|${randomState}` : randomState;
       let codeVerifier: string | undefined;
       let codeChallenge: string | undefined;
 
@@ -150,7 +154,7 @@ export function OAuthVerificationButton({
 
   const getButtonText = () => {
     if (isLoading) return 'Connecting...';
-    if (platform.status === 'verified') return 'Manage Verification';
+    if (platform.status === 'verified') return 'ViewDevScore';
     if (platform.status === 'pending') return 'Verification Pending';
     return `Connect ${platform.name}`;
   };
@@ -181,19 +185,30 @@ export function OAuthVerificationButton({
         {platform.description}
       </p>
 
-      <Button
-        onClick={handleOAuthLogin}
-        disabled={isLoading || platform.status === 'pending'}
-        className="w-full"
-        variant={platform.status === 'verified' ? 'outline' : 'default'}
-      >
-        {isLoading ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
+      {platform.status === 'verified' ? (
+        <Button
+          onClick={() => {}}
+          className="w-full"
+          variant="outline"
+        >
           <ExternalLink className="w-4 h-4 mr-2" />
-        )}
-        {getButtonText()}
-      </Button>
+          ViewDevScore
+        </Button>
+      ) : (
+        <Button
+          onClick={handleOAuthLogin}
+          disabled={isLoading || platform.status === 'pending'}
+          className="w-full"
+          variant="default"
+        >
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <ExternalLink className="w-4 h-4 mr-2" />
+          )}
+          {getButtonText()}
+        </Button>
+      )}
 
       {platform.status === 'verified' && (
         <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg">

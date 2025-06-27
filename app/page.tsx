@@ -21,6 +21,8 @@ import {
   Layers
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAccount } from 'wagmi';
+import { useEffect, useState } from 'react';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 60 },
@@ -55,6 +57,43 @@ const slideInRight = {
 };
 
 export default function Home() {
+  const { address, isConnected } = useAccount();
+  const [isVerifiedGithub, setIsVerifiedGithub] = useState(false);
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
+  const [isVerifiedTwitter, setIsVerifiedTwitter] = useState(false);
+  const [twitterUsername, setTwitterUsername] = useState<string | null>(null);
+  const [isVerifiedDiscord, setIsVerifiedDiscord] = useState(false);
+  const [discordUsername, setDiscordUsername] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isConnected || !address) return;
+    fetch(`/api/user/profile?publicKey=${address}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.isVerifiedGithub) {
+          setIsVerifiedGithub(true);
+          setGithubUsername(data.githubUsername || null);
+        } else {
+          setIsVerifiedGithub(false);
+          setGithubUsername(null);
+        }
+        if (data && data.isVerifiedTwitter) {
+          setIsVerifiedTwitter(true);
+          setTwitterUsername(data.twitterUsername || null);
+        } else {
+          setIsVerifiedTwitter(false);
+          setTwitterUsername(null);
+        }
+        if (data && data.isVerifiedDiscord) {
+          setIsVerifiedDiscord(true);
+          setDiscordUsername(data.discordUsername || null);
+        } else {
+          setIsVerifiedDiscord(false);
+          setDiscordUsername(null);
+        }
+      });
+  }, [isConnected, address]);
+
   return (
     <div className="space-y-32 overflow-hidden">
       {/* Hero Section */}
@@ -163,6 +202,71 @@ export default function Home() {
           ))}
         </motion.div>
       </motion.section>
+
+      {/* Verified Platforms Section (GitHub, Twitter, Discord) */}
+      {isConnected && (isVerifiedGithub || isVerifiedTwitter || isVerifiedDiscord) && (
+        <motion.section
+          className="flex flex-wrap justify-center gap-6 my-8"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+        >
+          {isVerifiedGithub && (
+            <Card className="w-full max-w-md border-2 border-green-400/30 shadow-lg bg-gradient-to-br from-green-50 to-white dark:from-green-900/10 dark:to-background">
+              <CardContent className="p-8 flex flex-col items-center space-y-4">
+                <div className="flex items-center space-x-3">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12C2 16.42 5.06 20.06 9.26 21.14C9.86 21.24 10.08 20.88 10.08 20.56C10.08 20.28 10.07 19.5 10.07 18.62C7 19.28 6.34 17.36 6.34 17.36C5.82 16.08 5.03 15.76 5.03 15.76C3.91 15.06 5.12 15.08 5.12 15.08C6.36 15.18 7 16.36 7 16.36C8.09 18.18 9.91 17.68 10.54 17.38C10.64 16.6 10.92 16.08 11.23 15.8C8.99 15.52 6.62 14.62 6.62 10.44C6.62 9.26 7.05 8.32 7.76 7.58C7.65 7.3 7.27 6.18 7.86 4.74C7.86 4.74 8.74 4.44 10.07 5.58C10.91 5.34 11.81 5.22 12.71 5.22C13.61 5.22 14.51 5.34 15.35 5.58C16.68 4.44 17.56 4.74 17.56 4.74C18.15 6.18 17.77 7.3 17.66 7.58C18.37 8.32 18.8 9.26 18.8 10.44C18.8 14.63 16.42 15.52 14.18 15.8C14.59 16.16 14.96 16.86 14.96 17.92C14.96 19.36 14.95 20.22 14.95 20.56C14.95 20.88 15.17 21.25 15.78 21.14C19.98 20.06 23.04 16.42 23.04 12C23.04 6.48 18.52 2 12 2Z" fill="#22c55e"/></svg>
+                  <span className="font-bold text-lg text-green-700 dark:text-green-400">GitHub Verified</span>
+                  {githubUsername && (
+                    <span className="text-muted-foreground text-sm">@{githubUsername}</span>
+                  )}
+                </div>
+                <Button className="w-full mt-2" variant="outline" size="lg" asChild>
+                  <a href="/dashboard" className="flex items-center justify-center">
+                    ViewDevScore
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {isVerifiedTwitter && (
+            <Card className="w-full max-w-md border-2 border-blue-400/30 shadow-lg bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/10 dark:to-background">
+              <CardContent className="p-8 flex flex-col items-center space-y-4">
+                <div className="flex items-center space-x-3">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.46 6c-.77.35-1.6.58-2.47.69a4.3 4.3 0 0 0 1.88-2.37 8.59 8.59 0 0 1-2.72 1.04A4.28 4.28 0 0 0 16.11 4c-2.37 0-4.29 1.92-4.29 4.29 0 .34.04.67.11.99C7.69 9.13 4.07 7.38 1.64 4.7c-.37.64-.58 1.38-.58 2.17 0 1.5.76 2.82 1.92 3.6-.71-.02-1.38-.22-1.97-.54v.05c0 2.1 1.5 3.85 3.5 4.25-.36.1-.74.16-1.13.16-.28 0-.54-.03-.8-.08.54 1.7 2.12 2.94 3.99 2.97A8.6 8.6 0 0 1 2 19.54c-.29 0-.57-.02-.85-.05A12.13 12.13 0 0 0 8.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.54A8.18 8.18 0 0 0 22.46 6z" fill="#3b82f6"/></svg>
+                  <span className="font-bold text-lg text-blue-700 dark:text-blue-400">Twitter Verified</span>
+                  {twitterUsername && (
+                    <span className="text-muted-foreground text-sm">@{twitterUsername}</span>
+                  )}
+                </div>
+                <Button className="w-full mt-2" variant="outline" size="lg" asChild>
+                  <a href="/dashboard" className="flex items-center justify-center">
+                    ViewDevScore
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {isVerifiedDiscord && (
+            <Card className="w-full max-w-md border-2 border-indigo-400/30 shadow-lg bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-900/10 dark:to-background">
+              <CardContent className="p-8 flex flex-col items-center space-y-4">
+                <div className="flex items-center space-x-3">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20.317 4.369A19.791 19.791 0 0 0 16.885 3.1a.112.112 0 0 0-.119.056c-.523.927-1.104 2.13-1.513 3.084a17.876 17.876 0 0 0-5.505 0c-.409-.963-.99-2.157-1.513-3.084A.115.115 0 0 0 8.115 3.1a19.736 19.736 0 0 0-3.432 1.27.105.105 0 0 0-.047.043C2.042 7.045 1.18 9.58 1.5 12.07c0 .01.005.02.01.03a19.9 19.9 0 0 0 5.993 3.03.112.112 0 0 0 .123-.04c.462-.63.874-1.295 1.226-1.994a.112.112 0 0 0-.062-.155 12.6 12.6 0 0 1-1.792-.86.112.112 0 0 1-.011-.186c.12-.09.24-.18.353-.27a.112.112 0 0 1 .114-.01c3.781 1.73 7.87 1.73 11.627 0a.112.112 0 0 1 .115.01c.113.09.233.18.353.27a.112.112 0 0 1-.01.186c-.57.33-1.16.62-1.792.86a.112.112 0 0 0-.062.155c.36.7.773 1.364 1.226 1.994a.112.112 0 0 0 .123.04 19.876 19.876 0 0 0 6.002-3.03.112.112 0 0 0 .01-.03c.38-3.03-.63-5.565-2.136-7.658a.098.098 0 0 0-.047-.043zM8.02 13.32c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.95-2.41 2.15-2.41 1.21 0 2.17 1.09 2.15 2.41 0 1.33-.95 2.41-2.15 2.41zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41 0-1.33.95-2.41 2.15-2.41 1.21 0 2.17 1.09 2.15 2.41 0 1.33-.95 2.41-2.15 2.41z" fill="#6366f1"/></svg>
+                  <span className="font-bold text-lg text-indigo-700 dark:text-indigo-400">Discord Verified</span>
+                  {discordUsername && (
+                    <span className="text-muted-foreground text-sm">@{discordUsername}</span>
+                  )}
+                </div>
+                <Button className="w-full mt-2" variant="outline" size="lg" asChild>
+                  <a href="/dashboard" className="flex items-center justify-center">
+                    ViewDevScore
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </motion.section>
+      )}
 
       {/* How It Works Section */}
       <motion.section 

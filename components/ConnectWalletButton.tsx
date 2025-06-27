@@ -4,6 +4,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from './ui/button';
 import { Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useRef } from 'react';
 
 interface ConnectWalletButtonProps {
   size?: 'sm' | 'default' | 'lg';
@@ -11,6 +12,9 @@ interface ConnectWalletButtonProps {
 }
 
 export function ConnectWalletButton({ size = 'default', className }: ConnectWalletButtonProps) {
+  // Track if we've already registered this session
+  const registeredRef = useRef<string | null>(null);
+
   return (
     <ConnectButton.Custom>
       {({
@@ -28,6 +32,25 @@ export function ConnectWalletButton({ size = 'default', className }: ConnectWall
           account &&
           chain &&
           (!authenticationStatus || authenticationStatus === 'authenticated');
+
+        // Register publicKey when connected
+        useEffect(() => {
+          const register = async () => {
+            if (connected && account?.address && registeredRef.current !== account.address) {
+              try {
+                await fetch('/api/user/register', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ publicKey: account.address }),
+                });
+                registeredRef.current = account.address;
+              } catch (err) {
+                console.error('Failed to register wallet:', err);
+              }
+            }
+          };
+          register();
+        }, [connected, account?.address]);
 
         return (
           <div
