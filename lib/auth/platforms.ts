@@ -141,6 +141,12 @@ class PlatformAuth {
 
   async verifyPlatform(platform: string, code: string, state: string): Promise<VerificationResult> {
     try {
+      console.log(`Starting platform verification for ${platform}:`, {
+        codeLength: code.length,
+        state: state,
+        hasPublicKey: state.includes('publicKey:')
+      });
+
       // Validate state to prevent CSRF attacks
       // WARNING: This is insecure and only for local testing!
       // if (!oauthManager.validateOAuthState(platform, state)) {
@@ -155,6 +161,10 @@ class PlatformAuth {
       let codeVerifier: string | undefined = undefined;
       if (platform === 'twitter') {
         codeVerifier = oauthManager.getCodeVerifier(platform, state) || undefined;
+        console.log(`Twitter code verifier retrieved:`, {
+          hasCodeVerifier: !!codeVerifier,
+          codeVerifierLength: codeVerifier?.length
+        });
       }
 
       // Exchange code for access token
@@ -163,6 +173,8 @@ class PlatformAuth {
         code, 
         codeVerifier
       );
+
+      console.log(`Token exchange successful for ${platform}`);
 
       // Get user data from platform
       let user: PlatformUser;
@@ -179,6 +191,8 @@ class PlatformAuth {
         default:
           throw new Error(`Unsupported platform: ${platform}`);
       }
+
+      console.log(`User authentication successful for ${platform}:`, user.username);
 
       return {
         success: true,

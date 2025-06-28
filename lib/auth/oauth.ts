@@ -56,11 +56,6 @@ class OAuthManager {
   };
 
   constructor() {
-    // Debug environment variables
-    console.log('OAuth Environment Debug:');
-    console.log('NEXT_PUBLIC_APP_URL:', `"${process.env.NEXT_PUBLIC_APP_URL}"`);
-    console.log('NEXT_PUBLIC_DISCORD_CLIENT_ID:', `"${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}"`);
-    console.log('Discord redirectUri:', `"${this.configs.discord.redirectUri}"`);
   }
 
   generateState(): string {
@@ -99,15 +94,6 @@ class OAuthManager {
       throw new Error(`Invalid redirect URI for ${platform}: ${config.redirectUri}`);
     }
 
-    // Debug logging
-    console.log('OAuth Debug - Platform:', platform);
-    console.log('OAuth Debug - Config:', {
-      clientId: config.clientId,
-      redirectUri: config.redirectUri,
-      scope: config.scope,
-      authUrl: config.authUrl
-    });
-
     // Manually construct the URL to avoid encoding issues
     const baseUrl = config.authUrl;
     const params = [
@@ -125,7 +111,6 @@ class OAuthManager {
     }
 
     const finalUrl = `${baseUrl}?${params.join('&')}`;
-    console.log('OAuth Debug - Final URL:', finalUrl);
     
     return finalUrl;
   }
@@ -148,7 +133,7 @@ class OAuthManager {
     });
 
     // Add client_secret for platforms that require it (GitHub, Discord)
-    // Twitter OAuth 2.0 with PKCE doesn't require client_secret
+    // Twitter OAuth 2.0 with PKCE doesn't require client_secret in body
     if (platform !== 'twitter' && config.clientSecret) {
       body.append('client_secret', config.clientSecret);
     }
@@ -156,24 +141,25 @@ class OAuthManager {
     // Add PKCE verifier for Twitter
     if (platform === 'twitter' && codeVerifier) {
       body.append('code_verifier', codeVerifier);
+    } else if (platform === 'twitter' && !codeVerifier) {
+      console.error('Twitter OAuth requires code_verifier but none provided!');
     }
 
-    // Debug logging for Discord
-    if (platform === 'discord') {
-      console.log('Discord Token Exchange Debug:');
-      console.log('Client ID:', config.clientId);
-      console.log('Client Secret (first 10 chars):', config.clientSecret ? config.clientSecret.substring(0, 10) + '...' : 'NOT SET');
-      console.log('Redirect URI:', config.redirectUri);
-      console.log('Code length:', code.length);
-      console.log('Token URL:', config.tokenUrl);
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    };
+
+    // Add Authorization header for Twitter OAuth 2.0 with PKCE
+    if (platform === 'twitter' && config.clientSecret) {
+      const credentials = btoa(`${config.clientId}:${config.clientSecret}`);
+      headers['Authorization'] = `Basic ${credentials}`;
     }
 
     const response = await fetch(config.tokenUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json',
-      },
+      headers: headers,
       body: body.toString(),
     });
 
@@ -188,6 +174,31 @@ class OAuthManager {
 
   // Store OAuth state and code verifier
   storeOAuthState(platform: string, state: string, codeVerifier?: string): void {
+    // Extract the actual state from the combined state string
+    // State format: "publicKey:${address}|${randomState}" or just "${randomState}"
+    // For Twitter: "publicKey:${address}|${randomState}|${codeVerifier}" or "${randomState}|${codeVerifier}"
+    let actualState = state;
+
+    if (platform === 'twitter') {
+      // For Twitter, extract the random state part (before the code verifier)
+      const parts = state.split('|');
+      if (parts.length >= 3) {
+        // Format: publicKey:address|randomState|codeVerifier
+        actualState = parts[1];
+      } else if (parts.length >= 2) {
+        // Format: randomState|codeVerifier
+        actualState = parts[0];
+      }
+    } else {
+      // For other platforms, extract state normally
+      if (state.includes('publicKey:')) {
+        const parts = state.split('|');
+        if (parts.length >= 2) {
+          actualState = parts[1];
+        }
+      }
+    }
+
     // Try to use sessionStorage if available (client-side)
     if (typeof window !== 'undefined' && window.sessionStorage) {
       sessionStorage.setItem(`oauth_state_${platform}`, state);
@@ -196,7 +207,7 @@ class OAuthManager {
       }
     } else {
       // Server-side storage
-      const key = `${platform}_${state}`;
+      const key = `${platform}_${actualState}`;
       oauthStorage.set(key, { state, codeVerifier, timestamp: Date.now() });
       
       // Clean up old entries (older than 10 minutes)
@@ -211,6 +222,31 @@ class OAuthManager {
 
   // Retrieve and validate OAuth state
   validateOAuthState(platform: string, state: string): boolean {
+    // Extract the actual state from the combined state string
+    // State format: "publicKey:${address}|${randomState}" or just "${randomState}"
+    // For Twitter: "publicKey:${address}|${randomState}|${codeVerifier}" or "${randomState}|${codeVerifier}"
+    let actualState = state;
+
+    if (platform === 'twitter') {
+      // For Twitter, extract the random state part (before the code verifier)
+      const parts = state.split('|');
+      if (parts.length >= 3) {
+        // Format: publicKey:address|randomState|codeVerifier
+        actualState = parts[1];
+      } else if (parts.length >= 2) {
+        // Format: randomState|codeVerifier
+        actualState = parts[0];
+      }
+    } else {
+      // For other platforms, extract state normally
+      if (state.includes('publicKey:')) {
+        const parts = state.split('|');
+        if (parts.length >= 2) {
+          actualState = parts[1];
+        }
+      }
+    }
+
     // Try to use sessionStorage if available (client-side)
     if (typeof window !== 'undefined' && window.sessionStorage) {
       const storedState = sessionStorage.getItem(`oauth_state_${platform}`);
@@ -218,7 +254,7 @@ class OAuthManager {
       return storedState === state;
     } else {
       // Server-side validation
-      const key = `${platform}_${state}`;
+      const key = `${platform}_${actualState}`;
       const stored = oauthStorage.get(key);
       if (stored && stored.state === state) {
         oauthStorage.delete(key);
@@ -229,14 +265,47 @@ class OAuthManager {
   }
 
   getCodeVerifier(platform: string, state: string): string | null {
+    // Extract the actual state from the combined state string
+    // State format: "publicKey:${address}|${randomState}" or just "${randomState}"
+    // For Twitter: "publicKey:${address}|${randomState}|${codeVerifier}" or "${randomState}|${codeVerifier}"
+    let actualState = state;
+    let codeVerifier: string | null = null;
+
+    if (platform === 'twitter') {
+      // For Twitter, the state includes the code verifier
+      const parts = state.split('|');
+      if (parts.length >= 3) {
+        // Format: publicKey:address|randomState|codeVerifier
+        actualState = parts[1];
+        codeVerifier = parts[2];
+      } else if (parts.length >= 2) {
+        // Format: randomState|codeVerifier
+        actualState = parts[0];
+        codeVerifier = parts[1];
+      }
+    } else {
+      // For other platforms, extract state normally
+      if (state.includes('publicKey:')) {
+        const parts = state.split('|');
+        if (parts.length >= 2) {
+          actualState = parts[1];
+        }
+      }
+    }
+
+    // For Twitter, return the code verifier from state
+    if (platform === 'twitter' && codeVerifier) {
+      return codeVerifier;
+    }
+
     // Try to use sessionStorage if available (client-side)
     if (typeof window !== 'undefined' && window.sessionStorage) {
-      const verifier = sessionStorage.getItem(`oauth_verifier_${platform}`);
+      const verifier = sessionStorage.getItem(`oauth_verifier_${platform}`);  
       sessionStorage.removeItem(`oauth_verifier_${platform}`);
       return verifier;
     } else {
       // Server-side retrieval
-      const key = `${platform}_${state}`;
+      const key = `${platform}_${actualState}`;
       const stored = oauthStorage.get(key);
       if (stored && stored.codeVerifier) {
         return stored.codeVerifier;

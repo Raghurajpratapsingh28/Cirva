@@ -87,8 +87,6 @@ export function OAuthVerificationButton({
 
       // Generate state and code verifier for security
       const randomState = oauthManager.generateState();
-      // Encode publicKey in state
-      const state = address ? `publicKey:${address}|${randomState}` : randomState;
       let codeVerifier: string | undefined;
       let codeChallenge: string | undefined;
 
@@ -96,15 +94,24 @@ export function OAuthVerificationButton({
       if (platform.id === 'twitter') {
         codeVerifier = oauthManager.generateCodeVerifier();
         codeChallenge = await oauthManager.generateCodeChallenge(codeVerifier);
-        console.log('Twitter OAuth PKCE setup:', { codeVerifier: codeVerifier?.substring(0, 10) + '...', codeChallenge: codeChallenge?.substring(0, 10) + '...' });
       }
 
-      // Store OAuth state and verifier
+      // Encode publicKey and code verifier in state for Twitter
+      let state: string;
+      if (platform.id === 'twitter' && codeVerifier) {
+        // For Twitter, include code verifier in state: publicKey:address|randomState|codeVerifier
+        const baseState = address ? `publicKey:${address}|${randomState}` : randomState;
+        state = `${baseState}|${codeVerifier}`;
+      } else {
+        // For other platforms, just include publicKey
+        state = address ? `publicKey:${address}|${randomState}` : randomState;
+      }
+
+      // Store OAuth state and verifier (for backward compatibility)
       oauthManager.storeOAuthState(platform.id, state, codeVerifier);
 
       // Get authorization URL
       const authUrl = oauthManager.getAuthUrl(platform.id, state, codeChallenge);
-      console.log(`${platform.name} OAuth URL:`, authUrl);
 
       // Open OAuth popup or redirect
       const popup = window.open(
