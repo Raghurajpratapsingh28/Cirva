@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  publicKey         String   @unique
+  githubUsername    String?  
+  twitterUsername   String?  
+  discordUsername   String?  
+  isVerifiedGithub  Boolean  @default(false)
+  isVerifiedTwitter Boolean  @default(false)
+  isVerifiedDiscord Boolean  @default(false)
+  discordId         String?  // Discord user ID
+  discordEmail      String?  // Discord email
+  discordAvatar     String?  // Discord avatar URL
+  discordProfileUrl String?  // Discord profile URL
+  discordVerified   Boolean? // Discord verified status
+  discordDiscriminator String? // Discord discriminator
+  discordGuildCount Int?     // Number of guilds
+  discordPremiumType Int?    // Premium type
+  discordMfaEnabled Boolean? // MFA enabled
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  guilds            Guild[]
+}
+
+model Guild {
+  id            Int      @id @default(autoincrement())
+  guildId       String   @unique // Discord server ID
+  discordUserId String   // Discord user ID who invited the bot
+  userId        Int      // Reference to User table
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+}
