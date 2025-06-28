@@ -41,6 +41,15 @@ export async function GET(request: NextRequest) {
           data: {
             discordUsername: result.user.username,
             isVerifiedDiscord: true,
+            discordId: result.user.id,
+            discordEmail: result.user.email,
+            discordAvatar: result.user.avatar,
+            discordProfileUrl: result.user.profileUrl,
+            discordVerified: result.user.verified,
+            discordDiscriminator: result.user.metadata?.discriminator,
+            discordGuildCount: result.user.metadata?.guilds,
+            discordPremiumType: result.user.metadata?.premiumType,
+            discordMfaEnabled: result.user.metadata?.mfaEnabled,
           },
         });
       }

@@ -78,6 +78,7 @@ export default function VerifyPage() {
       color: 'from-blue-400 to-blue-600'
     }
   ]);
+  const [botInviteSuccess, setBotInviteSuccess] = useState(false);
 
   // Check for verification results in URL parameters
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function VerifyPage() {
     const success = urlParams.get('success') === 'true';
     const platform = urlParams.get('platform');
     const error = urlParams.get('error');
+    const botInvite = urlParams.get('bot_invite');
 
     if (success && platform) {
       // Update platform status
@@ -103,6 +105,10 @@ export default function VerifyPage() {
       window.history.replaceState({}, '', window.location.pathname);
     } else if (error) {
       toast.error(`Verification failed: ${error}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (botInvite === 'success') {
+      setBotInviteSuccess(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -193,6 +199,22 @@ export default function VerifyPage() {
           Connect your social and development platforms securely using OAuth 2.0 authentication. 
           Your credentials are never stored on our servers.
         </p>
+        {botInviteSuccess ? (
+          <div className="mt-4 flex flex-col items-center">
+            <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
+            <span className="text-green-600 font-semibold">Bot successfully invited to your server!</span>
+          </div>
+        ) : (
+          <a
+            href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&scope=bot%20applications.commands%20identify&permissions=2109828&response_type=code&redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL + '/api/auth/discord/callback/bot-invite')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button variant="secondary" size="sm" className="mt-4">
+              Invite Bot to Server
+            </Button>
+          </a>
+        )}
       </motion.div>
 
       {/* Stats */}

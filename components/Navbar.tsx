@@ -122,7 +122,7 @@ export function Navbar() {
               >
                 <ConnectWalletButton />
               </motion.div>
-              
+
               {/* Mobile menu button */}
               <motion.div
                 className="md:hidden"
