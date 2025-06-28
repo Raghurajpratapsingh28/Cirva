@@ -478,11 +478,11 @@
 			]
 		},
 		"docs.chain.link/samples/ChainlinkFunctions/GetDefiScore.sol": {
-			"keccak256": "0x332f161fb7d57edd4e6933f3662b69d048c6c7286b39494c7c5004ef634cf011",
+			"keccak256": "0xc95ebb3dc65905d0d90556ae00a691d45d62f7adf03b8807ec249d6f8b9b56c5",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://26f009f3191209a115821fb5c6ec95047e7ab10d49a6045fb542f066decc3c45",
-				"dweb:/ipfs/QmNkjzU4YbyoLkpn1aFTmA9kMGrYX7RZUfz3NpEEJvDJuF"
+				"bzz-raw://0109f545f71a1ddcc74783065d143a53791b95b188ec85529981fb7e020dc3ac",
+				"dweb:/ipfs/QmewZxMQC1BGJmsekMbNMEJSRky1uf75ASHtseCaNNEBcF"
 			]
 		}
 	},

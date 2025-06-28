@@ -35,7 +35,7 @@ contract GetDefiScore is FunctionsClient, ConfirmedOwner {
     // Fetch number of followers, public repos, commits, PRs, issues from the github API
     string source =
         "const walletAddress = args[0];"
-        "const chainId = 'eth-mainnet';"
+        "const chainId = args[1];"
         "const apiKey = 'cqt_rQTJpm9Bgbcvk7XJT3WkxdCxFVyf';"
         "const tokenRes = await Functions.makeHttpRequest({"
             "url: `https://api.covalenthq.com/v1/${chainId}/address/${walletAddress}/balances_v2/?key=${apiKey}`"
