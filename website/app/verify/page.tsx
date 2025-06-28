@@ -15,7 +15,8 @@ import {
   Shield,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Bot
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,15 @@ interface Platform {
   color: string;
   username?: string;
   profileUrl?: string;
+}
+
+interface BotStatus {
+  hasBotInvited: boolean;
+  guildCount: number;
+  guilds: Array<{
+    guildId: string;
+    invitedAt: string;
+  }>;
 }
 
 export default function VerifyPage() {
@@ -78,7 +88,10 @@ export default function VerifyPage() {
       color: 'from-blue-400 to-blue-600'
     }
   ]);
-  const [botInviteSuccess, setBotInviteSuccess] = useState(false);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+  const [loadingBotStatus, setLoadingBotStatus] = useState(false);
+  const [allGuilds, setAllGuilds] = useState<any[]>([]);
+  const [loadingAllGuilds, setLoadingAllGuilds] = useState(false);
 
   // Check for verification results in URL parameters
   useEffect(() => {
@@ -87,6 +100,7 @@ export default function VerifyPage() {
     const platform = urlParams.get('platform');
     const error = urlParams.get('error');
     const botInvite = urlParams.get('bot_invite');
+    const message = urlParams.get('message');
 
     if (success && platform) {
       // Update platform status
@@ -108,13 +122,80 @@ export default function VerifyPage() {
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (botInvite === 'success') {
-      setBotInviteSuccess(true);
+      // Refresh bot status after successful invite
+      if (address) {
+        fetchBotStatus();
+      }
+      
+      if (message === 'already_invited') {
+        toast.success('Bot is already invited to this server!');
+      } else {
+        toast.success('Bot successfully invited to your server!');
+      }
+      
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+  }, [address]);
+
+  const fetchBotStatus = async () => {
+    if (!address) return;
+    
+    setLoadingBotStatus(true);
+    try {
+      console.log('🔍 Fetching bot status for address:', address);
+      const response = await fetch(`/api/user/bot-status?publicKey=${address}`);
+      const data = await response.json();
+      
+      console.log('📡 Bot status API response:', {
+        status: response.status,
+        data: data
+      });
+      
+      if (response.ok && !data.error) {
+        setBotStatus(data);
+        console.log('✅ Bot status updated:', {
+          hasBotInvited: data.hasBotInvited,
+          guildCount: data.guildCount,
+          guilds: data.guilds
+        });
+      } else {
+        console.error('❌ Failed to fetch bot status:', data.error);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching bot status:', error);
+    } finally {
+      setLoadingBotStatus(false);
+    }
+  };
+
+  const fetchAllGuilds = async () => {
+    setLoadingAllGuilds(true);
+    try {
+      console.log('🔍 Fetching all guilds from database...');
+      const response = await fetch('/api/guilds/list');
+      const data = await response.json();
+      
+      console.log('📡 All guilds API response:', {
+        status: response.status,
+        data: data
+      });
+      
+      if (response.ok && !data.error) {
+        setAllGuilds(data.guilds || []);
+        console.log('✅ All guilds updated:', data.guilds);
+      } else {
+        console.error('❌ Failed to fetch all guilds:', data.error);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching all guilds:', error);
+    } finally {
+      setLoadingAllGuilds(false);
+    }
+  };
 
   useEffect(() => {
     if (!address) return;
+    
     // Fetch user profile from backend
     fetch(`/api/user/profile?publicKey=${address}`)
       .then(res => res.json())
@@ -149,6 +230,10 @@ export default function VerifyPage() {
           }));
         }
       });
+
+    // Fetch bot status and all guilds
+    fetchBotStatus();
+    fetchAllGuilds();
   }, [address]);
 
   const handleVerificationComplete = (platformId: string, success: boolean, data?: any) => {
@@ -199,22 +284,160 @@ export default function VerifyPage() {
           Connect your social and development platforms securely using OAuth 2.0 authentication. 
           Your credentials are never stored on our servers.
         </p>
-        {botInviteSuccess ? (
-          <div className="mt-4 flex flex-col items-center">
-            <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
-            <span className="text-green-600 font-semibold">Bot successfully invited to your server!</span>
-          </div>
-        ) : (
-          <a
-            href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&scope=bot%20applications.commands%20identify&permissions=2109828&response_type=code&redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL + '/api/auth/discord/callback/bot-invite')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button variant="secondary" size="sm" className="mt-4">
-              Invite Bot to Server
-            </Button>
-          </a>
-        )}
+        
+        {/* Bot Status Section */}
+        <div className="mt-6">
+          {loadingBotStatus ? (
+            <div className="flex items-center justify-center space-x-2">
+              <Clock className="w-5 h-5 animate-spin" />
+              <span className="text-muted-foreground">Checking bot status...</span>
+            </div>
+          ) : botStatus?.hasBotInvited ? (
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+                <span className="text-green-600 font-semibold">Bot is already invited!</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Connected to {botStatus.guildCount} server{botStatus.guildCount !== 1 ? 's' : ''}
+              </div>
+              
+              {/* Guild IDs List */}
+              {botStatus.guilds && botStatus.guilds.length > 0 && (
+                <Card className="mt-4 max-w-md w-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Connected Servers ({botStatus.guildCount})</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {botStatus.guilds.map((guild, index) => (
+                        <div key={guild.guildId} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                          <code className="text-xs bg-background px-2 py-1 rounded border">
+                            {guild.guildId}
+                          </code>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(guild.invitedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchBotStatus}
+                disabled={loadingBotStatus}
+                className="mt-2"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Refresh Status
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center space-y-4">
+              <div className="flex items-center space-x-2">
+                <Bot className="w-6 h-6 text-blue-500" />
+                <span className="text-blue-600 font-semibold">Invite our Discord Bot</span>
+              </div>
+              <p className="text-sm text-muted-foreground max-w-md text-center">
+                Invite our bot to your Discord server to enhance your verification experience
+              </p>
+              
+              {/* Show all guilds from database */}
+              {allGuilds.length > 0 && (
+                <Card className="mt-4 max-w-md w-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center space-x-2">
+                      <Bot className="w-4 h-4 text-blue-500" />
+                      <span>All Server Connections ({allGuilds.length})</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {allGuilds.map((guild, index) => (
+                        <div key={`${guild.guildId}-${index}`} className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                          <div className="flex flex-col space-y-1">
+                            <code className="text-xs bg-background px-2 py-1 rounded border">
+                              {guild.guildId}
+                            </code>
+                            <span className="text-xs text-muted-foreground">
+                              {guild.discordUsername || 'Unknown User'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(guild.invitedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Show existing guilds even if not invited by current user */}
+              {botStatus?.guilds && botStatus.guilds.length > 0 && (
+                <Card className="mt-4 max-w-md w-full">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center space-x-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span>Your Server Connections ({botStatus.guilds.length})</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {botStatus.guilds.map((guild, index) => (
+                        <div key={guild.guildId} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                          <code className="text-xs bg-background px-2 py-1 rounded border">
+                            {guild.guildId}
+                          </code>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(guild.invitedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              <div className="flex flex-wrap gap-2 justify-center">
+                <a
+                  href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&scope=bot%20applications.commands%20identify&permissions=2109828&response_type=code&redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_APP_URL + '/api/auth/discord/callback/bot-invite')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button variant="secondary" size="sm">
+                    Invite Bot to Server
+                  </Button>
+                </a>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchBotStatus}
+                  disabled={loadingBotStatus}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Check Status
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchAllGuilds}
+                  disabled={loadingAllGuilds}
+                >
+                  <Clock className="w-4 h-4 mr-2" />
+                  Refresh All Guilds
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* Stats */}

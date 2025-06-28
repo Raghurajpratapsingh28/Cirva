@@ -53,6 +53,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'No user found with this Discord user ID' }, { status: 404 });
   }
 
+  // Check if guild already exists
+  const existingGuild = await prisma.guild.findUnique({
+    where: { guildId }
+  });
+
+  if (existingGuild) {
+    // Guild already exists, redirect with success message
+    return NextResponse.redirect(new URL('/verify?bot_invite=success&message=already_invited', request.url));
+  }
+
   // Store in Guild table
   try {
     await prisma.guild.create({
@@ -65,6 +75,7 @@ export async function GET(request: NextRequest) {
     // Redirect or show a success message
     return NextResponse.redirect(new URL('/verify?bot_invite=success', request.url));
   } catch (error) {
+    console.error('Error creating guild:', error);
     return NextResponse.json({ error: 'Failed to store guild info', details: error instanceof Error ? error.message : error }, { status: 500 });
   }
 } 
