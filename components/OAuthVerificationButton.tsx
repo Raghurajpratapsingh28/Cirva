@@ -50,6 +50,41 @@ export function OAuthVerificationButton({
     onVerificationStart?.();
 
     try {
+      // Check if environment variables are set
+      if (platform.id === 'twitter') {
+        const clientId = process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID;
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        
+        if (!clientId || clientId === 'your_twitter_client_id_here') {
+          toast.error('Twitter OAuth not configured. Please set up your Twitter API credentials.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!appUrl) {
+          toast.error('App URL not configured. Please set NEXT_PUBLIC_APP_URL in your environment variables.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      if (platform.id === 'discord') {
+        const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+        
+        if (!clientId || clientId === 'your_discord_client_id_here') {
+          toast.error('Discord OAuth not configured. Please set up your Discord API credentials.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!appUrl) {
+          toast.error('App URL not configured. Please set NEXT_PUBLIC_APP_URL in your environment variables.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Generate state and code verifier for security
       const randomState = oauthManager.generateState();
       // Encode publicKey in state
@@ -61,6 +96,7 @@ export function OAuthVerificationButton({
       if (platform.id === 'twitter') {
         codeVerifier = oauthManager.generateCodeVerifier();
         codeChallenge = await oauthManager.generateCodeChallenge(codeVerifier);
+        console.log('Twitter OAuth PKCE setup:', { codeVerifier: codeVerifier?.substring(0, 10) + '...', codeChallenge: codeChallenge?.substring(0, 10) + '...' });
       }
 
       // Store OAuth state and verifier
@@ -68,6 +104,7 @@ export function OAuthVerificationButton({
 
       // Get authorization URL
       const authUrl = oauthManager.getAuthUrl(platform.id, state, codeChallenge);
+      console.log(`${platform.name} OAuth URL:`, authUrl);
 
       // Open OAuth popup or redirect
       const popup = window.open(
@@ -104,6 +141,7 @@ export function OAuthVerificationButton({
             window.history.replaceState({}, '', window.location.pathname);
           } else if (urlParams.get('error')) {
             const error = urlParams.get('error');
+            console.error(`${platform.name} OAuth error:`, error);
             toast.error(`Verification failed: ${error}`);
             onVerificationComplete?.(false, { error });
             
@@ -124,7 +162,7 @@ export function OAuthVerificationButton({
 
     } catch (error) {
       console.error(`OAuth error for ${platform.name}:`, error);
-      toast.error(`Failed to start ${platform.name} verification`);
+      toast.error(`Failed to start ${platform.name} verification: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsLoading(false);
       onVerificationComplete?.(false, { error: error instanceof Error ? error.message : 'Unknown error' });
     }

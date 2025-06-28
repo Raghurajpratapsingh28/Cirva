@@ -154,7 +154,7 @@ class PlatformAuth {
       // Get code verifier for PKCE (Twitter)
       let codeVerifier: string | undefined = undefined;
       if (platform === 'twitter') {
-        codeVerifier = oauthManager.getCodeVerifier(platform) || undefined;
+        codeVerifier = oauthManager.getCodeVerifier(platform, state) || undefined;
       }
 
       // Exchange code for access token

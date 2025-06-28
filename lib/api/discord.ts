@@ -1,21 +1,17 @@
-// Discord API integration for user verification
+// Discord API integration for fetching user profile and guild data
 
-export interface DiscordUser {
+export interface DiscordProfile {
   id: string;
   username: string;
+  global_name: string;
   discriminator: string;
   avatar: string;
-  bot?: boolean;
-  system?: boolean;
-  mfa_enabled?: boolean;
-  banner?: string;
-  accent_color?: number;
-  locale?: string;
-  verified?: boolean;
-  email?: string;
-  flags?: number;
-  premium_type?: number;
-  public_flags?: number;
+  verified: boolean;
+  email: string;
+  premium_type: number;
+  public_flags: number;
+  mfa_enabled: boolean;
+  created_at?: string;
 }
 
 export interface DiscordGuild {
@@ -27,126 +23,128 @@ export interface DiscordGuild {
   joined_at: string;
 }
 
+export interface DiscordGuildMember {
+  user: DiscordProfile;
+  roles: string[];
+  joined_at: string;
+  premium_since?: string;
+}
+
 class DiscordAPI {
   private baseUrl = 'https://discord.com/api/v10';
-  private clientId: string | undefined;
-  private clientSecret: string | undefined;
+  private token: string | undefined;
 
   constructor() {
-    this.clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
-    this.clientSecret = process.env.DISCORD_CLIENT_SECRET;
+    this.token = process.env.NEXT_PUBLIC_DISCORD_TOKEN;
   }
 
-  async getAuthUrl(redirectUri: string, state: string): Promise<string> {
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: this.clientId || '',
-      scope: 'identify guilds',
-      redirect_uri: redirectUri,
-      state: state,
-    });
+  private async request(endpoint: string, accessToken?: string): Promise<any> {
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+    };
 
-    return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
-  }
-
-  async exchangeCodeForToken(code: string, redirectUri: string): Promise<string> {
-    const response = await fetch(`${this.baseUrl}/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id: this.clientId || '',
-        client_secret: this.clientSecret || '',
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Discord OAuth error: ${response.status}`);
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    } else if (this.token) {
+      headers['Authorization'] = `Bot ${this.token}`;
     }
 
-    const data = await response.json();
-    return data.access_token;
-  }
-
-  async getUser(accessToken: string): Promise<DiscordUser> {
-    const response = await fetch(`${this.baseUrl}/users/@me`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers,
     });
 
     if (!response.ok) {
-      throw new Error(`Discord API error: ${response.status}`);
+      throw new Error(`Discord API error: ${response.status} ${response.statusText}`);
     }
 
     return response.json();
   }
 
-  async getUserGuilds(accessToken: string): Promise<DiscordGuild[]> {
-    const response = await fetch(`${this.baseUrl}/users/@me/guilds`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Discord API error: ${response.status}`);
-    }
-
-    return response.json();
+  async getProfile(accessToken: string): Promise<DiscordProfile> {
+    return this.request('/users/@me', accessToken);
   }
 
-  async verifyUserInGuild(accessToken: string, guildId: string): Promise<boolean> {
+  async getGuilds(accessToken: string, limit = 100): Promise<DiscordGuild[]> {
+    return this.request(`/users/@me/guilds?limit=${limit}`, accessToken);
+  }
+
+  async getGuildMember(guildId: string, userId: string, accessToken?: string): Promise<DiscordGuildMember> {
+    return this.request(`/guilds/${guildId}/members/${userId}`, accessToken);
+  }
+
+  async verifyProfileOwnership(username: string, verificationCode: string): Promise<boolean> {
     try {
-      const guilds = await this.getUserGuilds(accessToken);
-      return guilds.some(guild => guild.id === guildId);
+      // Note: Discord doesn't have a public API to search users by username
+      // In a real app, you might need to use a different verification method
+      // such as having the user join a specific server or send a DM with the code
+      
+      // Mock verification for demonstration
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          // Simulate 80% success rate
+          resolve(Math.random() > 0.2);
+        }, 1000);
+      });
     } catch (error) {
-      console.error('Error verifying Discord guild membership:', error);
+      console.error('Error verifying Discord profile:', error);
       return false;
     }
   }
 
-  calculateReputationScore(user: DiscordUser, guilds: DiscordGuild[]): number {
+  calculateReputationScore(profile: DiscordProfile, guilds: DiscordGuild[]): number {
     let score = 0;
     
     // Base score for verified account
-    if (user.verified) {
+    if (profile.verified) {
       score += 100;
     }
-    
-    // Score from account age (estimated from Discord ID)
-    const DISCORD_EPOCH = 1420070400000;
-    const snowflake = BigInt(user.id);
-    const timestamp = Number(snowflake >> BigInt(22)) + DISCORD_EPOCH;
-    const accountCreated = new Date(timestamp);
-    const accountAge = (Date.now() - accountCreated.getTime()) / (1000 * 60 * 60 * 24 * 365);
-    score += Math.min(accountAge * 30, 150);
     
     // Score from guild participation
     score += Math.min(guilds.length * 10, 200);
     
-    // Bonus for premium subscription
-    if (user.premium_type && user.premium_type > 0) {
+    // Premium subscription bonus
+    if (profile.premium_type > 0) {
       score += 50;
+    }
+    
+    // MFA enabled bonus
+    if (profile.mfa_enabled) {
+      score += 25;
+    }
+    
+    // Account age bonus (estimated from Discord ID)
+    if (profile.id) {
+      const DISCORD_EPOCH = 1420070400000;
+      const snowflake = BigInt(profile.id);
+      const timestamp = Number(snowflake >> BigInt(22)) + DISCORD_EPOCH;
+      const accountCreated = new Date(timestamp);
+      const accountAge = (Date.now() - accountCreated.getTime()) / (1000 * 60 * 60 * 24 * 365);
+      score += Math.min(accountAge * 30, 150);
     }
     
     return Math.round(Math.min(score, 500)); // Cap at 500
   }
 
-  // Mock verification for demo purposes
-  async mockVerifyUser(username: string, verificationCode: string): Promise<boolean> {
-    // In a real app, this would check if the user has the verification code
-    // in their Discord status or bio
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // Simulate 80% success rate
-        resolve(Math.random() > 0.2);
-      }, 1000);
-    });
+  // Helper method to get user's guilds with member counts
+  async getUserGuildsWithDetails(accessToken: string): Promise<DiscordGuild[]> {
+    const guilds = await this.getGuilds(accessToken);
+    
+    // Add additional details if needed
+    return guilds.map(guild => ({
+      ...guild,
+      member_count: guild.member_count || 0,
+    }));
+  }
+
+  // Helper method to check if user is in a specific guild
+  async isUserInGuild(guildId: string, accessToken: string): Promise<boolean> {
+    try {
+      const guilds = await this.getGuilds(accessToken);
+      return guilds.some(guild => guild.id === guildId);
+    } catch (error) {
+      console.error('Error checking guild membership:', error);
+      return false;
+    }
   }
 }
 

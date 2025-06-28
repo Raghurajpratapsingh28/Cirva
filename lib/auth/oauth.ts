@@ -23,6 +23,10 @@ export interface VerificationResult {
   error?: string;
 }
 
+// In-memory storage for OAuth state and code verifiers
+// In production, you should use a proper database or Redis
+const oauthStorage = new Map<string, { state: string; codeVerifier?: string; timestamp: number }>();
+
 class OAuthManager {
   private configs: Record<string, OAuthConfig> = {
     github: {
@@ -45,7 +49,7 @@ class OAuthManager {
       clientId: process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID || '',
       clientSecret: process.env.TWITTER_CLIENT_SECRET || '',
       redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/twitter/callback`,
-      scope: 'tweet.read users.read',
+      scope: 'tweet.read users.read offline.access',
       authUrl: 'https://twitter.com/i/oauth2/authorize',
       tokenUrl: 'https://api.twitter.com/2/oauth2/token',
     },
@@ -110,11 +114,16 @@ class OAuthManager {
 
     const body = new URLSearchParams({
       client_id: config.clientId,
-      client_secret: config.clientSecret || '',
       code: code,
       redirect_uri: config.redirectUri,
       grant_type: 'authorization_code',
     });
+
+    // Add client_secret for platforms that require it (GitHub, Discord)
+    // Twitter OAuth 2.0 with PKCE doesn't require client_secret
+    if (platform !== 'twitter' && config.clientSecret) {
+      body.append('client_secret', config.clientSecret);
+    }
 
     // Add PKCE verifier for Twitter
     if (platform === 'twitter' && codeVerifier) {
@@ -131,31 +140,71 @@ class OAuthManager {
     });
 
     if (!response.ok) {
-      throw new Error(`Token exchange failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`Token exchange failed for ${platform}:`, response.status, errorText);
+      throw new Error(`Token exchange failed: ${response.status} - ${errorText}`);
     }
 
     return response.json();
   }
 
-  // Store OAuth state and code verifier in session storage
+  // Store OAuth state and code verifier
   storeOAuthState(platform: string, state: string, codeVerifier?: string): void {
-    sessionStorage.setItem(`oauth_state_${platform}`, state);
-    if (codeVerifier) {
-      sessionStorage.setItem(`oauth_verifier_${platform}`, codeVerifier);
+    // Try to use sessionStorage if available (client-side)
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      sessionStorage.setItem(`oauth_state_${platform}`, state);
+      if (codeVerifier) {
+        sessionStorage.setItem(`oauth_verifier_${platform}`, codeVerifier);
+      }
+    } else {
+      // Server-side storage
+      const key = `${platform}_${state}`;
+      oauthStorage.set(key, { state, codeVerifier, timestamp: Date.now() });
+      
+      // Clean up old entries (older than 10 minutes)
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+      for (const [k, v] of oauthStorage.entries()) {
+        if (v.timestamp < tenMinutesAgo) {
+          oauthStorage.delete(k);
+        }
+      }
     }
   }
 
   // Retrieve and validate OAuth state
   validateOAuthState(platform: string, state: string): boolean {
-    const storedState = sessionStorage.getItem(`oauth_state_${platform}`);
-    sessionStorage.removeItem(`oauth_state_${platform}`);
-    return storedState === state;
+    // Try to use sessionStorage if available (client-side)
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const storedState = sessionStorage.getItem(`oauth_state_${platform}`);
+      sessionStorage.removeItem(`oauth_state_${platform}`);
+      return storedState === state;
+    } else {
+      // Server-side validation
+      const key = `${platform}_${state}`;
+      const stored = oauthStorage.get(key);
+      if (stored && stored.state === state) {
+        oauthStorage.delete(key);
+        return true;
+      }
+      return false;
+    }
   }
 
-  getCodeVerifier(platform: string): string | null {
-    const verifier = sessionStorage.getItem(`oauth_verifier_${platform}`);
-    sessionStorage.removeItem(`oauth_verifier_${platform}`);
-    return verifier;
+  getCodeVerifier(platform: string, state: string): string | null {
+    // Try to use sessionStorage if available (client-side)
+    if (typeof window !== 'undefined' && window.sessionStorage) {
+      const verifier = sessionStorage.getItem(`oauth_verifier_${platform}`);
+      sessionStorage.removeItem(`oauth_verifier_${platform}`);
+      return verifier;
+    } else {
+      // Server-side retrieval
+      const key = `${platform}_${state}`;
+      const stored = oauthStorage.get(key);
+      if (stored && stored.codeVerifier) {
+        return stored.codeVerifier;
+      }
+      return null;
+    }
   }
 }
 

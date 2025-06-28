@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { platformAuth } from '@/lib/auth/platforms';
+import { PrismaClient } from '@/lib/generated/prisma';
+
+const prisma = new PrismaClient();
+
+function extractPublicKey(state: string): string | null {
+  const match = state.match(/^publicKey:([^|]+)\|/);
+  return match ? match[1] : null;
+}
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -24,6 +32,20 @@ export async function GET(request: NextRequest) {
     const result = await platformAuth.verifyPlatform('discord', code, state);
     
     if (result.success) {
+      // Extract publicKey from state
+      const publicKey = state ? extractPublicKey(state) : null;
+      if (publicKey) {
+        // Update user in DB
+        await prisma.user.update({
+          where: { publicKey },
+          data: {
+            discordUsername: result.user.username,
+            isVerifiedDiscord: true,
+          },
+        });
+      }
+      // Store verification result in session or database
+      // For demo, we'll redirect with success parameters
       const successUrl = new URL('/verify', request.url);
       successUrl.searchParams.set('platform', 'discord');
       successUrl.searchParams.set('success', 'true');
