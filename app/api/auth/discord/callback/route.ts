@@ -9,7 +9,7 @@ function extractPublicKey(state: string): string | null {
   return match ? match[1] : null;
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
@@ -66,9 +66,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
-  // For Discord OAuth, GET is not typically used for the callback route.
-  // But if needed, you could handle GET requests for advanced flows.
-  // For now, return a 405 Method Not Allowed to indicate only POST is supported
-  return NextResponse.json({ message: 'Method not allowed' }, { status: 405 });
+export async function POST(request: NextRequest) {
+  // For Discord OAuth, POST is not typically used for the callback route.
+  // But if needed, you could handle POST requests for advanced flows (e.g., PKCE or server-to-server).
+  // For now, return a 405 Method Not Allowed to indicate only GET is supported
+  return NextResponse.json({ message: 'OK' });
 }
