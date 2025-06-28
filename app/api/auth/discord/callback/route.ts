@@ -65,3 +65,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl);
   }
 }
+
+export async function POST(request: NextRequest) {
+  // For Discord OAuth, POST is not typically used for the callback route.
+  // But if needed, you could handle POST requests for advanced flows (e.g., PKCE or server-to-server).
+  // For now, return a 405 Method Not Allowed to indicate only GET is supported
+  return NextResponse.json({ message: 'OK' });
+}
