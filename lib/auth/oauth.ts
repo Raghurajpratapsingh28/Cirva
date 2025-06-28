@@ -30,30 +30,38 @@ const oauthStorage = new Map<string, { state: string; codeVerifier?: string; tim
 class OAuthManager {
   private configs: Record<string, OAuthConfig> = {
     github: {
-      clientId: process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || '',
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/github/callback`,
+      clientId: (process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GITHUB_CLIENT_SECRET || '').trim(),
+      redirectUri: `${(process.env.NEXT_PUBLIC_APP_URL || '').trim()}/api/auth/github/callback`,
       scope: 'read:user user:email',
       authUrl: 'https://github.com/login/oauth/authorize',
       tokenUrl: 'https://github.com/login/oauth/access_token',
     },
     discord: {
-      clientId: process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '',
-      clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/discord/callback`,
+      clientId: (process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.DISCORD_CLIENT_SECRET || '').trim(),
+      redirectUri: `${(process.env.NEXT_PUBLIC_APP_URL || '').trim()}/api/auth/discord/callback`,
       scope: 'identify email guilds',
       authUrl: 'https://discord.com/api/oauth2/authorize',
       tokenUrl: 'https://discord.com/api/oauth2/token',
     },
     twitter: {
-      clientId: process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID || '',
-      clientSecret: process.env.TWITTER_CLIENT_SECRET || '',
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/twitter/callback`,
+      clientId: (process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.TWITTER_CLIENT_SECRET || '').trim(),
+      redirectUri: `${(process.env.NEXT_PUBLIC_APP_URL || '').trim()}/api/auth/twitter/callback`,
       scope: 'tweet.read users.read offline.access',
       authUrl: 'https://twitter.com/i/oauth2/authorize',
       tokenUrl: 'https://api.twitter.com/2/oauth2/token',
     },
   };
+
+  constructor() {
+    // Debug environment variables
+    console.log('OAuth Environment Debug:');
+    console.log('NEXT_PUBLIC_APP_URL:', `"${process.env.NEXT_PUBLIC_APP_URL}"`);
+    console.log('NEXT_PUBLIC_DISCORD_CLIENT_ID:', `"${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}"`);
+    console.log('Discord redirectUri:', `"${this.configs.discord.redirectUri}"`);
+  }
 
   generateState(): string {
     return Math.random().toString(36).substring(2, 15) + 
@@ -85,21 +93,41 @@ class OAuthManager {
       throw new Error(`Unsupported platform: ${platform}`);
     }
 
-    const params = new URLSearchParams({
-      client_id: config.clientId,
-      redirect_uri: config.redirectUri,
+    // Validate redirect URI
+    if (!config.redirectUri || config.redirectUri.includes('+++')) {
+      console.error('Invalid redirect URI detected:', config.redirectUri);
+      throw new Error(`Invalid redirect URI for ${platform}: ${config.redirectUri}`);
+    }
+
+    // Debug logging
+    console.log('OAuth Debug - Platform:', platform);
+    console.log('OAuth Debug - Config:', {
+      clientId: config.clientId,
+      redirectUri: config.redirectUri,
       scope: config.scope,
-      state: state,
-      response_type: 'code',
+      authUrl: config.authUrl
     });
+
+    // Manually construct the URL to avoid encoding issues
+    const baseUrl = config.authUrl;
+    const params = [
+      `client_id=${encodeURIComponent(config.clientId)}`,
+      `redirect_uri=${encodeURIComponent(config.redirectUri)}`,
+      `scope=${encodeURIComponent(config.scope)}`,
+      `state=${encodeURIComponent(state)}`,
+      `response_type=code`
+    ];
 
     // Add PKCE for Twitter OAuth 2.0
     if (platform === 'twitter' && codeChallenge) {
-      params.append('code_challenge', codeChallenge);
-      params.append('code_challenge_method', 'S256');
+      params.push(`code_challenge=${encodeURIComponent(codeChallenge)}`);
+      params.push(`code_challenge_method=S256`);
     }
 
-    return `${config.authUrl}?${params.toString()}`;
+    const finalUrl = `${baseUrl}?${params.join('&')}`;
+    console.log('OAuth Debug - Final URL:', finalUrl);
+    
+    return finalUrl;
   }
 
   async exchangeCodeForToken(
@@ -128,6 +156,16 @@ class OAuthManager {
     // Add PKCE verifier for Twitter
     if (platform === 'twitter' && codeVerifier) {
       body.append('code_verifier', codeVerifier);
+    }
+
+    // Debug logging for Discord
+    if (platform === 'discord') {
+      console.log('Discord Token Exchange Debug:');
+      console.log('Client ID:', config.clientId);
+      console.log('Client Secret (first 10 chars):', config.clientSecret ? config.clientSecret.substring(0, 10) + '...' : 'NOT SET');
+      console.log('Redirect URI:', config.redirectUri);
+      console.log('Code length:', code.length);
+      console.log('Token URL:', config.tokenUrl);
     }
 
     const response = await fetch(config.tokenUrl, {

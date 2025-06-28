@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
     errorUrl.searchParams.set('error', 'server_error');
     return NextResponse.redirect(errorUrl);
   }
+
 }
 
 export async function POST(request: NextRequest) {
