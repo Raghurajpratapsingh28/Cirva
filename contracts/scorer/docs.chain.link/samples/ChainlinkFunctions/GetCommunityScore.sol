@@ -35,12 +35,13 @@ contract GetCommunityScore is FunctionsClient, ConfirmedOwner {
     // Fetch number of followers, public repos, commits, PRs, issues from the github API
     string source =
         "const userId = args[0];"
+        "const serverId = args[1];"
         "const token = secrets.discordBotToken;"
         "const headers = {"
             "Authorization: `Bot MTM4ODQ1MzczNTAyOTgwNTEyNg.G3PCml.cqoJ5gBiQeKmW7lB5-oCbtoNsoq3WsnNG_g_3E`"
         "};"
         "const userResponse = await Functions.makeHttpRequest({"
-            "url: `https://discord.com/api/guilds/709736381660004372/members/${userId}`,"
+            "url: `https://discord.com/api/guilds/${serverId}/members/${userId}`,"
             "headers"
         "});"
         "if (userResponse.error) {"

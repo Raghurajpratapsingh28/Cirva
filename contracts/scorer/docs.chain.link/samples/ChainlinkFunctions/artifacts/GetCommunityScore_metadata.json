@@ -478,11 +478,11 @@
 			]
 		},
 		"docs.chain.link/samples/ChainlinkFunctions/GetCommunityScore.sol": {
-			"keccak256": "0xef35e71ffc86d74c850c094342040340fe1594177154feb629966047c9a7353d",
+			"keccak256": "0x20012097c655f21ca065dbcecddd24527fe7f51cad5ab822eac4b3b0cfcbe8be",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8baa2a849ca341966a60fe91753c81627e51437800ada9a5ee825994e2a79891",
-				"dweb:/ipfs/QmRwF7MGbFbGFZ5yoJXECpLVEMvtNprwDbFjmUWxB4qpy9"
+				"bzz-raw://cdc5d2ee7f50082e8e7ab8bebc59ef106de7c566aa85ae8d24bb2beaa5d68f2c",
+				"dweb:/ipfs/QmYMZzCEAXumwN32rCSPm9eEAMUxseChX9Y5EhZph4Nggx"
 			]
 		}
 	},

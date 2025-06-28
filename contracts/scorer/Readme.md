@@ -9,7 +9,7 @@ This project implements a modular scoring system using Chainlink Functions and e
 | Contract Type      | Description                              | Address |
 |--------------------|------------------------------------------|---------|
 | 🧑‍💻 Dev Score        | Measures coding contributions on GitHub     | [`0x9103650b6Cd763F00458D634D55f4FE15A2d328e`](https://sepolia.etherscan.io/address/0x9103650b6Cd763F00458D634D55f4FE15A2d328e) |
-| 👥 Community Score | Scores based on Discord presence & tenure | [`0xe74dbEad9f5c5964832B4F1898d7ddd28222DD2b`](https://sepolia.etherscan.io/address/0xe74dbEad9f5c5964832B4F1898d7ddd28222DD2b) |
+| 👥 Community Score | Scores based on Discord presence & tenure | [`0x9847bEca9D483707261Cbd70263B091eFafeAdc4`](https://sepolia.etherscan.io/address/0xe74dbEad9f5c5964832B4F1898d7ddd28222DD2b) |
 | 📱 Social Score     | Scores based on GitHub, Twitter, Discord | [`0xfA145E64eee885Db2190580B1bF2C9373a6D78CA`](https://sepolia.etherscan.io/address/0xfA145E64eee885Db2190580B1bF2C9373a6D78CA) |
 | 🏦 DeFi Score       | Evaluates wallet's DeFi/NFT/Builder data | [`0x4c00fbd73852db0e2af153261bc41d101f5858c9`](https://sepolia.etherscan.io/address/0x4c00fbd73852db0e2af153261bc41d101f5858c9) |
 
