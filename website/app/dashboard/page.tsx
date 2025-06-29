@@ -9,6 +9,7 @@ import { ReputationGraph } from '@/components/ReputationGraph';
 import { BadgeGrid } from '@/components/BadgeGrid';
 import { SyncStatusBadge } from '@/components/SyncStatusBadge';
 import { DevScoreButton } from '@/components/DevScoreButton';
+import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [twitterUsername, setTwitterUsername] = useState<string | undefined>();
 
   // Mock user data - in real app, fetch from IPFS/blockchain
   const [userProfile, setUserProfile] = useState({
@@ -60,6 +62,22 @@ export default function Dashboard() {
     lastUpdated: new Date().toISOString(),
     ens: null as string | null
   });
+
+  // Fetch user profile data including Twitter username
+  useEffect(() => {
+    if (address) {
+      fetch(`/api/user/profile?publicKey=${address}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && !data.error && data.twitterUsername) {
+            setTwitterUsername(data.twitterUsername);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching user profile:', error);
+        });
+    }
+  }, [address]);
 
   const handleRefreshScores = async () => {
     setIsRefreshing(true);
@@ -249,6 +267,24 @@ export default function Dashboard() {
               }
             }));
           }}
+        />
+      </motion.div>
+
+      {/* SocialScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <SocialScoreButton 
+          onScoreCalculated={(score) => {
+            toast.success(`Social score calculated: ${score.toString()}`);
+            // Update the mock user profile with the new score
+            setUserProfile(prev => ({
+              ...prev,
+              reputation: {
+                ...prev.reputation,
+                social: Number(score)
+              }
+            }));
+          }}
+          twitterUsername={twitterUsername}
         />
       </motion.div>
 

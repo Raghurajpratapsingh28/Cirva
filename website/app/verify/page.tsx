@@ -7,6 +7,7 @@ import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { VerificationStepper } from '@/components/VerificationStepper';
 import { OAuthVerificationButton } from '@/components/OAuthVerificationButton';
 import { DevScoreButton } from '@/components/DevScoreButton';
+import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -508,6 +509,17 @@ export default function VerifyPage() {
           onScoreCalculated={(score) => {
             toast.success(`Developer score calculated: ${score.toString()}`);
             console.log('Dev score calculated:', score.toString());
+          }}
+        />
+      </motion.div>
+
+      {/* SocialScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <SocialScoreButton 
+          twitterUsername={platforms.find(p => p.id === 'twitter')?.username}
+          onScoreCalculated={(score) => {
+            toast.success(`Social score calculated: ${score.toString()}`);
+            console.log('Social score calculated:', score.toString());
           }}
         />
       </motion.div>

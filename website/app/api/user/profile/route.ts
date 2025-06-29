@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
         isVerifiedTwitter: true,
         discordUsername: true,
         isVerifiedDiscord: true,
+        devScore: true,
+        socialScore: true,
       },
     });
     if (!user) {
