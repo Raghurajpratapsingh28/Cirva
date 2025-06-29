@@ -113,7 +113,10 @@ export async function POST(request: NextRequest) {
 
 // PUT endpoint to sync defi score from blockchain
 export async function PUT(request: NextRequest) {
-  const publicKey = request.nextUrl.searchParams.get('publicKey');
+  const body = await request.json();
+
+  const { publicKey, score } = body;
+
   if (!publicKey) {
     return NextResponse.json({ error: 'Missing publicKey' }, { status: 400 });
   }
@@ -122,45 +125,19 @@ export async function PUT(request: NextRequest) {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { publicKey },
-      select: {
-        id: true,
-        publicKey: true,
-        defiScore: true,
-        updatedAt: true,
-      },
     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Fetch score from blockchain
-    let blockchainScore: bigint;
-    try {
-      blockchainScore = await getStoredDefiScore(publicKey as `0x${string}`);
-    } catch (error) {
-      console.error('Error fetching blockchain defi score:', error);
-      return NextResponse.json({ 
-        error: 'Failed to fetch score from blockchain' 
-      }, { status: 500 });
-    }
-
-    // Convert bigint to number (assuming score is within safe range)
-    const scoreNumber = Number(blockchainScore);
-
     // Update user's defi score in database
     const updatedUser = await prisma.user.update({
       where: { publicKey },
       data: {
-        defiScore: scoreNumber,
+        defiScore: score,
         updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        publicKey: true,
-        defiScore: true,
-        updatedAt: true,
-      },
+      }
     });
 
     return NextResponse.json({
@@ -171,7 +148,6 @@ export async function PUT(request: NextRequest) {
         defiScore: updatedUser.defiScore,
         lastUpdated: updatedUser.updatedAt,
       },
-      blockchainScore: blockchainScore.toString(),
       synced: true,
     });
   } catch (error) {

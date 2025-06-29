@@ -281,6 +281,16 @@ export function DefiScoreButton({ score, onScoreCalculated }: { score?: number |
           )}
           Get DeFi Score
         </Button>
+        {score !== null && (
+          <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+            <p className="text-sm font-medium text-green-900 dark:text-green-100">
+              Your Defi Score: {score?.toString()}
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+              Based on Onchain activity and engagement
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -103,9 +103,28 @@ export function useDefiScore() {
       console.log("Polling for defi score...");
       const score = await getStoredDefiScore(address);
       console.log("Defi score: ", score);
-      if (score && score > 0n) {
+      const updateDefiScoreResponse = await fetch("/api/user/defiscore", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          publicKey: address,
+          score: Number(score)
+        })
+      });
+      
+      if (updateDefiScoreResponse.ok) {
+        const defiScoreUpdateData = await updateDefiScoreResponse.json();
+        console.log("defiScoreUpdateData: ", defiScoreUpdateData);
+      }
+
+      console.log("bool: ", Number(score) >= 0)
+      if (Number(score) >= 0) {
+        console.log("reached here")
         setState(prev => ({ ...prev, score, isPolling: false, isLoading: false }));
         toast.success('DeFi score updated!');
+        window.location.reload();
         return;
       }
     } catch (error) {

@@ -262,10 +262,11 @@ export default function VerifyPage() {
             return p;
           }));
 
+          console.log("All scores: ", data.devScore, data.socialScore, data.communityScore, data.defiScore);
           setDevScore(data.devScore ?? null);
           setSocialScore(data.socialScore ?? null);
           setCommunityScore(data.communityScore ?? null);
-          setDefiScore(data.defiScore ?? null);
+          setDefiScore(data.defiScore === null ? null : data.defiScore);
 
           // Fallback: Auto-populate Discord User ID from profile if not already set from bot-status
           if (data.discordId && !discordUserId) {
@@ -803,18 +804,18 @@ export default function VerifyPage() {
               disabled={
                 generateLoading ||
                 reputationLoading ||
-                !devScore || !socialScore || !communityScore || !defiScore
+                devScore === null || socialScore === null || communityScore === null || defiScore === null
               }
             >
               {generateLoading ? 'Generating...' : reputation?.reputationScore ? 'Regenerate Reputation' : 'Generate Reputation'}
             </Button>
             {generateError && <div className="text-red-500 mt-2">{generateError}</div>}
-            {!devScore || !socialScore || !communityScore || !defiScore ? (
+            {devScore === null || socialScore === null || communityScore === null || defiScore === null ? (
               <div className="text-yellow-600 mt-2 text-sm">
                 Please complete all score verifications before generating reputation.
                 <br />
                 <span className="text-xs">
-                  Dev: {devScore || 'Missing'} | Social: {socialScore || 'Missing'} | Community: {communityScore || 'Missing'} | DeFi: {defiScore || 'Missing'}
+                  Dev: {devScore ?? 'Missing'} | Social: {socialScore ?? 'Missing'} | Community: {communityScore ?? 'Missing'} | DeFi: {defiScore === null ? 'Missing' : defiScore}
                 </span>
               </div>
             ) : null}

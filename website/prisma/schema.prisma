@@ -31,11 +31,11 @@ model User {
   communityScore       Int? // Calculated community score (0-1000)
   defiScore            Int?
   reputationScore      Int?
-  devRating            Int?
-  communityRating      Int?
-  socialRating         Int?
-  defiRating           Int?
-  overallRating        Int?
+  devRating            Float?
+  communityRating      Float?
+  socialRating         Float?
+  defiRating           Float?
+  overallRating        Float?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   guilds               Guild[]
