@@ -13,15 +13,12 @@ import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { CommunityScoreButton } from '@/components/CommunityScoreButton';
 import { CCIPDemo } from '@/components/CCIPDemo';
 import { DefiScoreButton } from '@/components/DefiScoreButton';
-// import { DevScoreButton } from '@/components/DevScoreButton';
-// import { SocialScoreButton } from '@/components/SocialScoreButton';
-// import { CommunityScoreButton } from '@/components/CommunityScoreButton';
-// import { DefiScoreButton } from '@/components/DefiScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   RefreshCw, 
   Zap, 
@@ -30,10 +27,16 @@ import {
   Shield,
   Globe,
   Star,
-  Network
+  Network,
+  AlertCircle,
+  Trophy,
+  Medal,
+  Crown,
+  Target
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useDashboardData } from '@/hooks/useDashboardData';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -55,55 +58,36 @@ export default function Dashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [showCCIPDemo, setShowCCIPDemo] = useState(false);
-  const [twitterUsername, setTwitterUsername] = useState<string | undefined>();
 
-  // Mock user data - in real app, fetch from IPFS/blockchain
-  const [userProfile, setUserProfile] = useState({
+  // Use the new comprehensive dashboard data hook
+  const { data: dashboardData, loading, error, refreshData } = useDashboardData();
+
+  // Transform dashboard data to match the expected format for existing components
+  const userProfile = dashboardData ? {
+    reputation: dashboardData.reputation,
+    badges: dashboardData.badges.totalBadges,
+    verifiedPlatforms: dashboardData.verifiedPlatforms,
+    lastUpdated: dashboardData.lastUpdated,
+    ens: null as string | null
+  } : {
     reputation: {
-      overall: 845,
-      developer: 920,
-      contributor: 780,
-      social: 650,
-      defi: 890
+      overall: 0,
+      developer: 0,
+      contributor: 0,
+      social: 0,
+      defi: 0
     },
-    badges: 12,
-    verifiedPlatforms: ['GitHub', 'Discord'],
+    badges: 0,
+    verifiedPlatforms: [],
     lastUpdated: new Date().toISOString(),
     ens: null as string | null
-  });
-
-  // Fetch user profile data including Twitter username
-  useEffect(() => {
-    if (address) {
-      fetch(`/api/user/profile?publicKey=${address}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data && !data.error && data.twitterUsername) {
-            setTwitterUsername(data.twitterUsername);
-          }
-        })
-        .catch(error => {
-          console.error('Error fetching user profile:', error);
-        });
-    }
-  }, [address]);
+  };
 
   const handleRefreshScores = async () => {
     setIsRefreshing(true);
     try {
-      // Mock API call - in real app, trigger Chainlink Automation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate score update
-      setUserProfile(prev => ({
-        ...prev,
-        reputation: {
-          ...prev.reputation,
-          overall: prev.reputation.overall + Math.floor(Math.random() * 20)
-        },
-        lastUpdated: new Date().toISOString()
-      }));
-      
+      // Refresh data from the API
+      await refreshData();
       toast.success('Reputation scores updated successfully!');
     } catch (error) {
       toast.error('Failed to refresh scores. Please try again.');
@@ -115,10 +99,24 @@ export default function Dashboard() {
   const handleSyncChains = async () => {
     setIsSyncing(true);
     try {
-      // Mock CCIP cross-chain sync
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Call the sync API to sync scores from blockchain
+      const response = await fetch(`/api/user/sync?publicKey=${address}`, {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to sync scores');
+      }
+
+      const syncResult = await response.json();
+      
+      // Refresh dashboard data after sync
+      await refreshData();
+      
       toast.success('Profile synced across all chains!');
     } catch (error) {
+      console.error('Sync error:', error);
       toast.error('Sync failed. Please try again.');
     } finally {
       setIsSyncing(false);
@@ -163,6 +161,56 @@ export default function Dashboard() {
     );
   }
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex items-center space-x-4">
+            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        <Skeleton className="h-64 w-full" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <Skeleton className="h-80 w-full" />
+          <Skeleton className="h-80 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+        <div className="text-center space-y-4">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
+          <h1 className="text-2xl font-bold">Error Loading Dashboard</h1>
+          <p className="text-muted-foreground max-w-md">
+            {error}
+          </p>
+        </div>
+        <Button onClick={refreshData} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <motion.div 
       className="space-y-8"
@@ -183,6 +231,30 @@ export default function Dashboard() {
           <ConnectWalletButton />
         </div>
       </motion.div>
+
+      {/* Sync Status Alert */}
+      {dashboardData?.syncStatus.needsSync && (
+        <motion.div variants={fadeInUp}>
+          <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Blockchain scores are out of sync
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-300">
+                    Some scores on the blockchain differ from your local scores. Consider syncing.
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={handleSyncChains}>
+                  Sync Now
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* CCIP Demo Card */}
       <motion.div variants={fadeInUp}>
@@ -208,7 +280,7 @@ export default function Dashboard() {
         <ProfileCard address={address!} profile={userProfile} />
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Enhanced Stats Cards */}
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         variants={staggerContainer}
@@ -217,6 +289,7 @@ export default function Dashboard() {
           {
             title: "Overall Score",
             value: userProfile.reputation.overall,
+            subtitle: `Rating: ${dashboardData?.ratings.overall || 0}/5`,
             icon: <Star className="w-5 h-5" />,
             color: "text-yellow-600",
             bgColor: "bg-yellow-100 dark:bg-yellow-900/20"
@@ -224,13 +297,15 @@ export default function Dashboard() {
           {
             title: "Developer Score", 
             value: userProfile.reputation.developer,
+            subtitle: `Rating: ${dashboardData?.ratings.dev || 0}/5`,
             icon: <TrendingUp className="w-5 h-5" />,
             color: "text-blue-600",
             bgColor: "bg-blue-100 dark:bg-blue-900/20"
           },
           {
             title: "Badges Earned",
-            value: userProfile.badges,
+            value: dashboardData?.badges.totalBadges || 0,
+            subtitle: `${dashboardData?.badges.breakdown.platform || 0} platform, ${dashboardData?.badges.breakdown.score || 0} score, ${dashboardData?.badges.breakdown.rating || 0} rating`,
             icon: <Award className="w-5 h-5" />,
             color: "text-purple-600", 
             bgColor: "bg-purple-100 dark:bg-purple-900/20"
@@ -238,6 +313,7 @@ export default function Dashboard() {
           {
             title: "Platforms",
             value: userProfile.verifiedPlatforms.length,
+            subtitle: `${dashboardData?.verifiedPlatforms.join(', ') || 'None verified'}`,
             icon: <Globe className="w-5 h-5" />,
             color: "text-green-600",
             bgColor: "bg-green-100 dark:bg-green-900/20"
@@ -247,11 +323,14 @@ export default function Dashboard() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm font-medium text-muted-foreground">
                       {stat.title}
                     </p>
                     <p className="text-2xl font-bold">{stat.value}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stat.subtitle}
+                    </p>
                   </div>
                   <div className={`p-3 rounded-full ${stat.bgColor} ${stat.color}`}>
                     {stat.icon}
@@ -263,11 +342,12 @@ export default function Dashboard() {
         ))}
       </motion.div>
 
-      {/* Reputation Breakdown */}
+      {/* Ratings and Scores Grid */}
       <motion.div 
         className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         variants={staggerContainer}
       >
+        {/* Reputation Breakdown */}
         <motion.div variants={fadeInUp}>
           <Card>
             <CardHeader>
@@ -281,7 +361,14 @@ export default function Dashboard() {
                 <div key={category} className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="capitalize font-medium">{category}</span>
-                    <Badge variant="secondary">{score}</Badge>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="secondary">{score}</Badge>
+                      {dashboardData?.ratings && (
+                        <Badge variant="outline">
+                          {dashboardData.ratings[category as keyof typeof dashboardData.ratings] || 0}/5
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <Progress value={(score / 1000) * 100} className="h-2" />
                 </div>
@@ -290,8 +377,35 @@ export default function Dashboard() {
           </Card>
         </motion.div>
 
+        {/* Ratings Overview */}
         <motion.div variants={fadeInUp}>
-          <ReputationGraph />
+          <Card>
+            <CardHeader>
+              <CardTitle>Ratings Overview</CardTitle>
+              <CardDescription>
+                Your star ratings across different categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {dashboardData?.ratings && Object.entries(dashboardData.ratings).map(([category, rating]) => (
+                <div key={category} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="capitalize font-medium">{category}</span>
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star 
+                          key={i} 
+                          className={`w-4 h-4 ${i < rating ? 'text-yellow-500 fill-current' : 'text-gray-300'}`} 
+                        />
+                      ))}
+                      <span className="ml-2 text-sm text-muted-foreground">{rating}/5</span>
+                    </div>
+                  </div>
+                  <Progress value={(rating / 5) * 100} className="h-2" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </motion.div>
       </motion.div>
 
@@ -420,6 +534,107 @@ export default function Dashboard() {
       {/* Badges */}
       <motion.div variants={fadeInUp}>
         <BadgeGrid address={address!} />
+      </motion.div>
+
+      {/* Badge Categories */}
+      {dashboardData?.badges && (
+        <motion.div variants={fadeInUp}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Trophy className="w-5 h-5" />
+                <span>Badge Categories</span>
+              </CardTitle>
+              <CardDescription>
+                Your achievements across different categories
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Platform Badges */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-blue-600" />
+                    <h4 className="font-medium">Platform Badges</h4>
+                    <Badge variant="secondary">{dashboardData.badges.breakdown.platform}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(dashboardData.badges.badges.platform).map(([platform, badge]) => 
+                      badge && (
+                        <div key={platform} className="text-sm text-muted-foreground flex items-center space-x-2">
+                          <Medal className="w-3 h-3" />
+                          <span>{badge}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Score Badges */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Target className="w-4 h-4 text-green-600" />
+                    <h4 className="font-medium">Score Badges</h4>
+                    <Badge variant="secondary">{dashboardData.badges.breakdown.score}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(dashboardData.badges.badges.score).map(([category, badge]) => 
+                      badge && (
+                        <div key={category} className="text-sm text-muted-foreground flex items-center space-x-2">
+                          <Award className="w-3 h-3" />
+                          <span>{badge}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Rating Badges */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Star className="w-4 h-4 text-yellow-600" />
+                    <h4 className="font-medium">Rating Badges</h4>
+                    <Badge variant="secondary">{dashboardData.badges.breakdown.rating}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(dashboardData.badges.badges.rating).map(([category, badge]) => 
+                      badge && (
+                        <div key={category} className="text-sm text-muted-foreground flex items-center space-x-2">
+                          <Crown className="w-3 h-3" />
+                          <span>{badge}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                {/* Achievement Badges */}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Trophy className="w-4 h-4 text-purple-600" />
+                    <h4 className="font-medium">Achievements</h4>
+                    <Badge variant="secondary">{dashboardData.badges.breakdown.achievement}</Badge>
+                  </div>
+                  <div className="space-y-1">
+                    {Object.entries(dashboardData.badges.badges.achievement).map(([achievement, badge]) => 
+                      badge && (
+                        <div key={achievement} className="text-sm text-muted-foreground flex items-center space-x-2">
+                          <Trophy className="w-3 h-3" />
+                          <span>{badge}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Reputation Graph */}
+      <motion.div variants={fadeInUp}>
+        <ReputationGraph />
       </motion.div>
     </motion.div>
   );
