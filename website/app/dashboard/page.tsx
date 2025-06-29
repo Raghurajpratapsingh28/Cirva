@@ -12,6 +12,7 @@ import { DevScoreButton } from '@/components/DevScoreButton';
 import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { CommunityScoreButton } from '@/components/CommunityScoreButton';
 import { CCIPDemo } from '@/components/CCIPDemo';
+import { DefiScoreButton } from '@/components/DefiScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -336,6 +337,22 @@ export default function Dashboard() {
               reputation: {
                 ...prev.reputation,
                 contributor: Number(score)
+              }
+            }));
+          }}
+        />
+      </motion.div>
+
+      {/* DefiScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <DefiScoreButton 
+          onScoreCalculated={(score) => {
+            toast.success(`DeFi score calculated: ${score.toString()}`);
+            setUserProfile(prev => ({
+              ...prev,
+              reputation: {
+                ...prev.reputation,
+                defi: Number(score)
               }
             }));
           }}

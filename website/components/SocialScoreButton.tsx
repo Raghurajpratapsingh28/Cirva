@@ -23,20 +23,19 @@ import { toast } from 'sonner';
 interface SocialScoreButtonProps {
   twitterUsername?: string;
   onScoreCalculated?: (score: bigint) => void;
+  score?: number | null;
 }
 
-export function SocialScoreButton({ twitterUsername, onScoreCalculated }: SocialScoreButtonProps) {
+export function SocialScoreButton({ twitterUsername, onScoreCalculated, score }: SocialScoreButtonProps) {
   const { address, isConnected, chainId } = useAccount();
   const { 
     isLoading, 
-    score, 
     error, 
     transactionHash, 
     requestId,
     isPolling,
     willReload,
     requestSocialScore, 
-    loadExistingScore,
     isCorrectNetwork,
     reloadPage
   } = useSocialScore();
@@ -49,7 +48,8 @@ export function SocialScoreButton({ twitterUsername, onScoreCalculated }: Social
 
     try {
       await requestSocialScore(twitterUsername);
-      // The score will be updated via the hook's polling mechanism
+      toast.success('Social score calculation started! The page will reload in 2 minutes to update your score.');
+      setTimeout(() => window.location.reload(), 120000);
     } catch (error) {
       console.error('Error getting social score:', error);
     }
@@ -60,8 +60,8 @@ export function SocialScoreButton({ twitterUsername, onScoreCalculated }: Social
   };
 
   // Update parent when score changes
-  if (score && onScoreCalculated) {
-    handleScoreCalculated(score);
+  if (typeof score === 'number' && onScoreCalculated) {
+    handleScoreCalculated(BigInt(score));
   }
 
   if (!isConnected) {
@@ -121,7 +121,7 @@ export function SocialScoreButton({ twitterUsername, onScoreCalculated }: Social
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="w-5 h-5" />
           Social Score
-          {score !== null && (
+          {score !== null && score !== undefined && (
             <Badge variant="secondary" className="ml-auto">
               {score.toString()}
             </Badge>
@@ -142,10 +142,7 @@ export function SocialScoreButton({ twitterUsername, onScoreCalculated }: Social
                   variant="outline" 
                   size="sm" 
                   className="mt-2"
-                  onClick={() => {
-                    // Try to load the score manually
-                    loadExistingScore();
-                  }}
+                  onClick={handleGetSocialScore}
                 >
                   <RefreshCw className="w-3 h-3 mr-1" />
                   Check Score Manually
@@ -197,12 +194,22 @@ export function SocialScoreButton({ twitterUsername, onScoreCalculated }: Social
           </div>
         )}
 
+        {score === null || score === undefined ? (
+          <div className="flex flex-col items-center space-y-2">
+            <span className="text-sm text-muted-foreground">No score found. Please click below to get your score.</span>
+            <Button onClick={handleGetSocialScore} disabled={isLoading || isPolling}>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Get Score
+            </Button>
+          </div>
+        ) : null}
+
         {score !== null && (
           <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
             <TrendingUp className="w-4 h-4 text-green-600" />
             <div className="flex-1">
               <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                Social Score: {score.toString()}
+                Social Score: {score?.toString()}
               </p>
               <p className="text-xs text-green-700 dark:text-green-300">
                 Calculated on-chain using Chainlink Functions
