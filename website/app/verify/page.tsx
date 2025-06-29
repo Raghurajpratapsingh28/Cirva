@@ -6,6 +6,7 @@ import { useAccount } from 'wagmi';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 import { VerificationStepper } from '@/components/VerificationStepper';
 import { OAuthVerificationButton } from '@/components/OAuthVerificationButton';
+import { DevScoreButton } from '@/components/DevScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -109,7 +110,8 @@ export default function VerifyPage() {
       ));
       
       const username = urlParams.get('username');
-      const score = urlParams.get('score');
+      // For GitHub, don't use score parameter since GetDevScore smart contract is the source of truth
+      const score = platform === 'github' ? null : urlParams.get('score');
       
       toast.success(`${platform} verified successfully!`, {
         description: username ? `Connected as ${username}` : undefined
@@ -497,6 +499,17 @@ export default function VerifyPage() {
             )}
           </motion.div>
         ))}
+      </motion.div>
+
+      {/* DevScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <DevScoreButton 
+          githubUsername={platforms.find(p => p.id === 'github')?.username}
+          onScoreCalculated={(score) => {
+            toast.success(`Developer score calculated: ${score.toString()}`);
+            console.log('Dev score calculated:', score.toString());
+          }}
+        />
       </motion.div>
 
       {/* Security Info */}

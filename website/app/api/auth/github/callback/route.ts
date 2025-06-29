@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       successUrl.searchParams.set('platform', 'github');
       successUrl.searchParams.set('success', 'true');
       successUrl.searchParams.set('username', result.user.username);
-      successUrl.searchParams.set('score', platformAuth.calculateReputationScore('github', result.user).toString());
+      // Removed client-side score calculation - GetDevScore smart contract is the source of truth
       
       return NextResponse.redirect(successUrl);
     } else {

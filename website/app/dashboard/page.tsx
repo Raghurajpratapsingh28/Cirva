@@ -8,6 +8,7 @@ import { ProfileCard } from '@/components/ProfileCard';
 import { ReputationGraph } from '@/components/ReputationGraph';
 import { BadgeGrid } from '@/components/BadgeGrid';
 import { SyncStatusBadge } from '@/components/SyncStatusBadge';
+import { DevScoreButton } from '@/components/DevScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -232,6 +233,23 @@ export default function Dashboard() {
         <motion.div variants={fadeInUp}>
           <ReputationGraph />
         </motion.div>
+      </motion.div>
+
+      {/* DevScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <DevScoreButton 
+          onScoreCalculated={(score) => {
+            toast.success(`Developer score calculated: ${score.toString()}`);
+            // Update the mock user profile with the new score
+            setUserProfile(prev => ({
+              ...prev,
+              reputation: {
+                ...prev.reputation,
+                developer: Number(score)
+              }
+            }));
+          }}
+        />
       </motion.div>
 
       {/* Action Buttons */}

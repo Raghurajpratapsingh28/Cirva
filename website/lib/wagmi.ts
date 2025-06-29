@@ -49,4 +49,12 @@ export const supportedChains = [
     rpcUrl: base.rpcUrls.default.http[0],
     blockExplorer: base.blockExplorers.default.url,
   },
+  {
+    id: sepolia.id,
+    name: 'Sepolia',
+    shortName: 'SEP',
+    icon: '🧪',
+    rpcUrl: sepolia.rpcUrls.default.http[0],
+    blockExplorer: sepolia.blockExplorers.default.url,
+  },
 ];

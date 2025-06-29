@@ -139,7 +139,8 @@ export function OAuthVerificationButton({
           
           if (success && platformParam === platform.id) {
             const username = urlParams.get('username');
-            const score = urlParams.get('score');
+            // For GitHub, don't use score parameter since GetDevScore smart contract is the source of truth
+            const score = platform.id === 'github' ? null : urlParams.get('score');
             
             toast.success(`${platform.name} verified successfully!`);
             onVerificationComplete?.(true, { username, score });

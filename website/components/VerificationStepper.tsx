@@ -57,7 +57,8 @@ export function VerificationStepper({ platform, onBack }: VerificationStepperPro
     
     if (success && platformParam === platform.id) {
       const username = urlParams.get('username');
-      const score = urlParams.get('score');
+      // For GitHub, don't use score parameter since GetDevScore smart contract is the source of truth
+      const score = platform.id === 'github' ? null : urlParams.get('score');
       
       setVerificationData({ username, score });
       setCurrentStep(1);
@@ -207,9 +208,14 @@ export function VerificationStepper({ platform, onBack }: VerificationStepperPro
                         <span className="ml-2 font-medium">{verificationData.username}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Points Earned:</span>
+                        <span className="text-muted-foreground">
+                          {platform.id === 'github' ? 'Next Step:' : 'Points Earned:'}
+                        </span>
                         <span className="ml-2 font-medium text-green-600">
-                          +{verificationData.score || platform.points}
+                          {platform.id === 'github' 
+                            ? 'Use GetDevScore to calculate your developer score'
+                            : `+${verificationData.score || platform.points}`
+                          }
                         </span>
                       </div>
                     </div>
