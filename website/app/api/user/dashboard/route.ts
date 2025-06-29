@@ -221,7 +221,8 @@ export async function GET(request: NextRequest) {
       defi: user.defiScore || 0,
     };
 
-    const overallScore = Math.round((scores.dev + scores.social + scores.community + scores.defi) / 4);
+    // Use reputationScore from database instead of calculating overall score
+    const reputationScore = user.reputationScore || 0;
 
     // Prepare ratings data
     const ratings = {
@@ -241,14 +242,14 @@ export async function GET(request: NextRequest) {
 
     // Calculate badges based on scores, ratings, and verified platforms
     const badgeData = calculateBadges(
-      { ...scores, overall: overallScore }, 
+      { ...scores, overall: reputationScore }, 
       ratings, 
       verifiedPlatforms
     );
 
-    // Prepare reputation breakdown
+    // Prepare reputation breakdown using reputationScore from backend
     const reputation = {
-      overall: overallScore,
+      overall: reputationScore,
       developer: scores.dev,
       contributor: scores.community,
       social: scores.social,
@@ -300,7 +301,7 @@ export async function GET(request: NextRequest) {
       scores: {
         database: scores,
         blockchain: blockchainScores,
-        overall: overallScore,
+        overall: reputationScore,
       },
       ratings: {
         dev: ratings.dev,

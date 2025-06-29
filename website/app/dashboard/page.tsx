@@ -287,7 +287,7 @@ export default function Dashboard() {
       >
         {[
           {
-            title: "Overall Score",
+            title: "Reputation Score",
             value: userProfile.reputation.overall,
             subtitle: `Rating: ${dashboardData?.ratings.overall || 0}/5`,
             icon: <Star className="w-5 h-5" />,

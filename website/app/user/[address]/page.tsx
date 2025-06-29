@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { ProfileCard } from '@/components/ProfileCard';
 import { ReputationGraph } from '@/components/ReputationGraph';
 import { BadgeGrid } from '@/components/BadgeGrid';
@@ -14,37 +15,51 @@ interface PageProps {
   };
 }
 
-// Mock function to validate and fetch profile data
-async function getProfileData(address: string) {
-  // In a real app, validate the address and fetch from IPFS/blockchain
-  if (!address || address.length < 10) {
+async function fetchUserProfile(address: string) {
+  if (!address || address.length < 10) return null;
+  try {
+    const headersList = await headers();
+    const host = headersList.get('host') || 'localhost:3000';
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+    
+    console.log('Fetching profile for address:', address);
+    const res = await fetch(`${protocol}://${host}/api/user/search?publicKey=${address}`, {
+      cache: 'no-store',
+    });
+    console.log('Response status:', res.status);
+    if (!res.ok) {
+      console.error('Response not ok:', res.status, res.statusText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('Fetched data:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
     return null;
   }
-
-  // Mock profile data
-  return {
-    address,
-    ens: null,
-    reputation: {
-      overall: 756,
-      developer: 820,
-      contributor: 690,
-      social: 580,
-      defi: 760
-    },
-    badges: 8,
-    verifiedPlatforms: ['GitHub', 'Discord'],
-    lastUpdated: new Date().toISOString(),
-    isPublic: true
-  };
 }
 
 export default async function ProfilePage({ params }: PageProps) {
-  const profile = await getProfileData(params.address);
+  const data = await fetchUserProfile(params.address);
 
-  if (!profile) {
+  if (!data || data.error) {
     notFound();
   }
+
+  const profile = {
+    address: params.address,
+    ens: null,
+    reputation: data.reputation,
+    badges: data.badges.totalBadges,
+    verifiedPlatforms: data.verifiedPlatforms,
+    lastUpdated: data.lastUpdated,
+    isPublic: true,
+    ratings: data.ratings,
+    scores: data.scores,
+    badgeBreakdown: data.badges.breakdown,
+    badgeDetails: data.badges.badges,
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -78,7 +93,7 @@ export default async function ProfilePage({ params }: PageProps) {
             <div className="text-2xl font-bold text-yellow-600">
               {profile.reputation.overall}
             </div>
-            <div className="text-sm text-muted-foreground">Overall Score</div>
+            <div className="text-sm text-muted-foreground">Reputation Score</div>
           </CardContent>
         </Card>
         <Card>
@@ -121,16 +136,42 @@ export default async function ProfilePage({ params }: PageProps) {
               <div key={category} className="space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="capitalize font-medium">{category}</span>
-                  <Badge variant="secondary">{score}</Badge>
+                  <Badge variant="secondary">{score as number}</Badge>
                 </div>
-                <Progress value={(score / 1000) * 100} className="h-2" />
+                <Progress value={((score as number) / 1000) * 100} className="h-2" />
               </div>
-            ))}
+            )) as React.ReactNode[]}
           </CardContent>
         </Card>
 
         <ReputationGraph />
       </div>
+
+      {/* Ratings Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ratings Overview</CardTitle>
+          <CardDescription>
+            Star ratings across different categories
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {profile.ratings && (Object.entries(profile.ratings).map(([category, rating]) => (
+            <div key={category} className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="capitalize font-medium">{category}</span>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <span key={i} className={`w-4 h-4 inline-block ${i < (rating as number) ? 'text-yellow-500' : 'text-gray-300'}`}>★</span>
+                  ))}
+                  <span className="ml-2 text-sm text-muted-foreground">{rating as number}/5</span>
+                </div>
+              </div>
+              <Progress value={((rating as number) / 5) * 100} className="h-2" />
+            </div>
+          )) as React.ReactNode[])}
+        </CardContent>
+      </Card>
 
       {/* Verified Platforms */}
       <Card>
@@ -142,7 +183,7 @@ export default async function ProfilePage({ params }: PageProps) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {profile.verifiedPlatforms.map((platform) => (
+            {profile.verifiedPlatforms.map((platform: string) => (
               <Badge key={platform} variant="secondary" className="text-sm">
                 {platform}
               </Badge>
@@ -153,6 +194,88 @@ export default async function ProfilePage({ params }: PageProps) {
 
       {/* Badges */}
       <BadgeGrid address={params.address} />
+
+      {/* Badge Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Badge Categories</CardTitle>
+          <CardDescription>
+            Achievements across different categories
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Platform Badges */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <h4 className="font-medium">Platform Badges</h4>
+                <Badge variant="secondary">{profile.badgeBreakdown.platform}</Badge>
+              </div>
+              <div className="space-y-1">
+                {(Object.entries(profile.badgeDetails.platform).map(([platform, badge]) =>
+                  badge && (
+                    <div key={platform} className="text-sm text-muted-foreground flex items-center space-x-2">
+                      <span>🏅</span>
+                      <span>{badge as string}</span>
+                    </div>
+                  )
+                ) as React.ReactNode[])}
+              </div>
+            </div>
+            {/* Score Badges */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <h4 className="font-medium">Score Badges</h4>
+                <Badge variant="secondary">{profile.badgeBreakdown.score}</Badge>
+              </div>
+              <div className="space-y-1">
+                {(Object.entries(profile.badgeDetails.score).map(([category, badge]) =>
+                  badge && (
+                    <div key={category} className="text-sm text-muted-foreground flex items-center space-x-2">
+                      <span>🏆</span>
+                      <span>{badge as string}</span>
+                    </div>
+                  )
+                ) as React.ReactNode[])}
+              </div>
+            </div>
+            {/* Rating Badges */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <h4 className="font-medium">Rating Badges</h4>
+                <Badge variant="secondary">{profile.badgeBreakdown.rating}</Badge>
+              </div>
+              <div className="space-y-1">
+                {(Object.entries(profile.badgeDetails.rating).map(([category, badge]) =>
+                  badge && (
+                    <div key={category} className="text-sm text-muted-foreground flex items-center space-x-2">
+                      <span>⭐</span>
+                      <span>{badge as string}</span>
+                    </div>
+                  )
+                ) as React.ReactNode[])}
+              </div>
+            </div>
+            {/* Achievement Badges */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <h4 className="font-medium">Achievements</h4>
+                <Badge variant="secondary">{profile.badgeBreakdown.achievement}</Badge>
+              </div>
+              <div className="space-y-1">
+                {(Object.entries(profile.badgeDetails.achievement).map(([achievement, badge]) =>
+                  badge && (
+                    <div key={achievement} className="text-sm text-muted-foreground flex items-center space-x-2">
+                      <span>🎖️</span>
+                      <span>{badge as string}</span>
+                    </div>
+                  )
+                ) as React.ReactNode[])}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Profile Stats */}
       <Card>
