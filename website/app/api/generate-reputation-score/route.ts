@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
             devRating: parsedResult.devRating,
             communityRating: parsedResult.communityRating,
             socialRating: parsedResult.socialRating,
-            defiRating: parsedResult.defiRating,
+            defiScore: parsedResult.defiRating,
             overallRating: parsedResult.overallRating
         }
     });

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         devScore: true,
         socialScore: true,
         communityScore: true,
-        defiRating: true,
+        defiScore: true,
       },
     });
     if (!user) {

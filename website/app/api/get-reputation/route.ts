@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         devRating: user.devRating,
         communityRating: user.communityRating,
         socialRating: user.socialRating,
-        defiRating: user.defiRating,
+        defiScore: user.defiScore,
         overallRating: user.overallRating
     }
     return NextResponse.json({

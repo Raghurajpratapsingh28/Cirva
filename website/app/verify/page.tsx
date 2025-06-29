@@ -265,7 +265,7 @@ export default function VerifyPage() {
           setDevScore(data.devScore ?? null);
           setSocialScore(data.socialScore ?? null);
           setCommunityScore(data.communityScore ?? null);
-          setDefiScore(data.defiRating ?? null);
+          setDefiScore(data.defiScore ?? null);
 
           // Fallback: Auto-populate Discord User ID from profile if not already set from bot-status
           if (data.discordId && !discordUserId) {
@@ -803,15 +803,20 @@ export default function VerifyPage() {
               disabled={
                 generateLoading ||
                 reputationLoading ||
-                !!reputation?.reputationScore ||
                 !devScore || !socialScore || !communityScore || !defiScore
               }
             >
-              {generateLoading ? 'Generating...' : 'Generate Reputation'}
+              {generateLoading ? 'Generating...' : reputation?.reputationScore ? 'Regenerate Reputation' : 'Generate Reputation'}
             </Button>
             {generateError && <div className="text-red-500 mt-2">{generateError}</div>}
             {!devScore || !socialScore || !communityScore || !defiScore ? (
-              <div className="text-yellow-600 mt-2 text-sm">Please complete all score verifications before generating reputation.</div>
+              <div className="text-yellow-600 mt-2 text-sm">
+                Please complete all score verifications before generating reputation.
+                <br />
+                <span className="text-xs">
+                  Dev: {devScore || 'Missing'} | Social: {socialScore || 'Missing'} | Community: {communityScore || 'Missing'} | DeFi: {defiScore || 'Missing'}
+                </span>
+              </div>
             ) : null}
           </CardContent>
         </Card>
