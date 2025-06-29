@@ -11,6 +11,7 @@ import { SyncStatusBadge } from '@/components/SyncStatusBadge';
 import { DevScoreButton } from '@/components/DevScoreButton';
 import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { CommunityScoreButton } from '@/components/CommunityScoreButton';
+import { CCIPDemo } from '@/components/CCIPDemo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -23,7 +24,8 @@ import {
   TrendingUp,
   Shield,
   Globe,
-  Star
+  Star,
+  Network
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -47,6 +49,7 @@ export default function Dashboard() {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showCCIPDemo, setShowCCIPDemo] = useState(false);
   const [twitterUsername, setTwitterUsername] = useState<string | undefined>();
 
   // Mock user data - in real app, fetch from IPFS/blockchain
@@ -126,6 +129,20 @@ export default function Dashboard() {
     }
   };
 
+  if (showCCIPDemo) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">CCIP Cross-Chain Demo</h1>
+          <Button variant="outline" onClick={() => setShowCCIPDemo(false)}>
+            Back to Dashboard
+          </Button>
+        </div>
+        <CCIPDemo />
+      </div>
+    );
+  }
+
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
@@ -160,6 +177,25 @@ export default function Dashboard() {
           <SyncStatusBadge />
           <ConnectWalletButton />
         </div>
+      </motion.div>
+
+      {/* CCIP Demo Card */}
+      <motion.div variants={fadeInUp}>
+        <Card className="border-2 border-dashed border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">🚀 CCIP Cross-Chain Demo</h3>
+                <p className="text-sm text-muted-foreground">
+                  Test the cross-chain reputation synchronization functionality
+                </p>
+              </div>
+              <Button onClick={() => setShowCCIPDemo(true)}>
+                Try CCIP Demo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Profile Overview */}
