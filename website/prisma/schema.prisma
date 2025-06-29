@@ -34,6 +34,7 @@ model User {
   discordMfaEnabled Boolean? // MFA enabled
   devScore          Int?     // Calculated developer score (0-1000)
   socialScore       Int?     // Calculated social score (0-1000)
+  communityScore    Int?     // Calculated community score (0-1000)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   guilds            Guild[]

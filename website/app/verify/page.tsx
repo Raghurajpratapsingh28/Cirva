@@ -8,6 +8,7 @@ import { VerificationStepper } from '@/components/VerificationStepper';
 import { OAuthVerificationButton } from '@/components/OAuthVerificationButton';
 import { DevScoreButton } from '@/components/DevScoreButton';
 import { SocialScoreButton } from '@/components/SocialScoreButton';
+import { CommunityScoreButton } from '@/components/CommunityScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -18,10 +19,13 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Bot
+  Bot,
+  Users,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -52,6 +56,8 @@ interface Platform {
 interface BotStatus {
   hasBotInvited: boolean;
   guildCount: number;
+  discordUserId?: string;
+  isVerifiedDiscord?: boolean;
   guilds: Array<{
     guildId: string;
     invitedAt: string;
@@ -94,6 +100,8 @@ export default function VerifyPage() {
   const [loadingBotStatus, setLoadingBotStatus] = useState(false);
   const [allGuilds, setAllGuilds] = useState<any[]>([]);
   const [loadingAllGuilds, setLoadingAllGuilds] = useState(false);
+  const [discordUserId, setDiscordUserId] = useState('');
+  const [discordServerId, setDiscordServerId] = useState('');
 
   // Check for verification results in URL parameters
   useEffect(() => {
@@ -161,6 +169,18 @@ export default function VerifyPage() {
           guildCount: data.guildCount,
           guilds: data.guilds
         });
+
+        // Auto-populate Discord User ID from bot-status API
+        if (data.discordUserId && !discordUserId) {
+          setDiscordUserId(data.discordUserId);
+          console.log('✅ Auto-populated Discord User ID from bot-status:', data.discordUserId);
+        }
+
+        // Auto-populate Discord Server ID if user has connected servers and no server ID is set
+        if (data.guilds && data.guilds.length > 0 && !discordServerId) {
+          setDiscordServerId(data.guilds[0].guildId);
+          console.log('✅ Auto-populated Discord Server ID:', data.guilds[0].guildId);
+        }
       } else {
         console.error('❌ Failed to fetch bot status:', data.error);
       }
@@ -231,13 +251,19 @@ export default function VerifyPage() {
             }
             return p;
           }));
+
+          // Fallback: Auto-populate Discord User ID from profile if not already set from bot-status
+          if (data.discordId && !discordUserId) {
+            setDiscordUserId(data.discordId);
+            console.log('✅ Auto-populated Discord User ID from profile:', data.discordId);
+          }
         }
       });
 
-    // Fetch bot status and all guilds
+    // Fetch bot status and all guilds (this will also set Discord User ID)
     fetchBotStatus();
     fetchAllGuilds();
-  }, [address]);
+  }, [address, discordUserId]);
 
   const handleVerificationComplete = (platformId: string, success: boolean, data?: any) => {
     if (success) {
@@ -522,6 +548,110 @@ export default function VerifyPage() {
             console.log('Social score calculated:', score.toString());
           }}
         />
+      </motion.div>
+
+      {/* Community Score Section */}
+      <motion.div variants={fadeInUp}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Community Score Configuration
+            </CardTitle>
+            <CardDescription>
+              Your Discord information for community score calculation
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Discord User ID Display */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Discord User ID</Label>
+              {discordUserId ? (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                  <code className="text-sm font-mono">{discordUserId}</code>
+                  <Badge variant="secondary" className="text-xs">
+                    Auto-detected
+                  </Badge>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                    Please verify your Discord account first
+                  </span>
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                </div>
+              )}
+            </div>
+
+            {/* Discord Server ID Display */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Discord Server ID</Label>
+              {discordServerId ? (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                  <code className="text-sm font-mono">{discordServerId}</code>
+                  <Badge variant="secondary" className="text-xs">
+                    Selected
+                  </Badge>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
+                  <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                    Please invite our bot to a Discord server first
+                  </span>
+                  <AlertCircle className="w-4 h-4 text-yellow-600" />
+                </div>
+              )}
+            </div>
+
+            {/* Server Selection from Connected Servers */}
+            {botStatus?.guilds && botStatus.guilds.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Select from your connected servers:</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {botStatus.guilds.map((guild) => (
+                    <Button
+                      key={guild.guildId}
+                      variant={discordServerId === guild.guildId ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setDiscordServerId(guild.guildId)}
+                      className="justify-start text-left"
+                    >
+                      <code className="text-xs mr-2">{guild.guildId}</code>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(guild.invitedAt).toLocaleDateString()}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Help Information */}
+            <div className="flex items-start space-x-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+              <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  How Community Score works:
+                </p>
+                <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                  <p>• <strong>Discord User ID:</strong> Automatically detected from your verified Discord account</p>
+                  <p>• <strong>Server ID:</strong> Select from your connected Discord servers above</p>
+                  <p>• <strong>Score Calculation:</strong> Based on avatar, nickname, badges, roles, tenure, and more</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Community Score Button */}
+            <CommunityScoreButton 
+              discordUserId={discordUserId}
+              discordServerId={discordServerId}
+              onScoreCalculated={(score) => {
+                toast.success(`Community score calculated: ${score.toString()}`);
+                console.log('Community score calculated:', score.toString());
+              }}
+            />
+          </CardContent>
+        </Card>
       </motion.div>
 
       {/* Security Info */}

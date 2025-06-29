@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         isVerifiedDiscord: true,
         devScore: true,
         socialScore: true,
+        communityScore: true,
       },
     });
     if (!user) {

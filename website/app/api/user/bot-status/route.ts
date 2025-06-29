@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       hasBotInvited,
       guildCount,
+      discordUserId: user.discordId,
+      isVerifiedDiscord: user.isVerifiedDiscord,
       guilds: user.guilds.map(guild => ({
         guildId: guild.guildId,
         invitedAt: guild.createdAt

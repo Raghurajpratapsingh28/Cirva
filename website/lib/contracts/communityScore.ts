@@ -1,0 +1,139 @@
+import { createPublicClient, http, parseAbi } from 'viem';
+import { sepolia } from 'wagmi/chains';
+
+// GetCommunityScore contract ABI - extracted from the smart contract
+const GET_COMMUNITY_SCORE_ABI = parseAbi([
+  'function sendRequest(uint64 subscriptionId, string[] calldata args) external returns (bytes32 requestId)',
+  'function getScore(address _developerAddress) external view returns (uint256)',
+  'function communityScore() external view returns (uint256)',
+  'function communityScoresMap(address) external view returns (uint256)',
+  'function currentUser() external view returns (address)',
+  'function s_lastRequestId() external view returns (bytes32)',
+  'function s_lastResponse() external view returns (bytes)',
+  'function s_lastError() external view returns (bytes)',
+  'event Response(bytes32 indexed requestId, uint256 communityScore, bytes response, bytes err)'
+]);
+
+// Contract address on Sepolia
+export const GET_COMMUNITY_SCORE_ADDRESS = '0x9847bEca9D483707261Cbd70263B091eFafeAdc4' as const;
+
+// Subscription ID for Chainlink Functions
+export const SUBSCRIPTION_ID = 5186n;
+
+// Create a public client for read operations
+export const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http()
+});
+
+export interface CommunityScoreContract {
+  sendRequest: (subscriptionId: bigint, args: string[]) => Promise<`0x${string}`>;
+  getScore: (developerAddress: `0x${string}`) => Promise<bigint>;
+  communityScore: () => Promise<bigint>;
+  communityScoresMap: (address: `0x${string}`) => Promise<bigint>;
+  currentUser: () => Promise<`0x${string}`>;
+  s_lastRequestId: () => Promise<`0x${string}`>;
+  s_lastResponse: () => Promise<`0x${string}`>;
+  s_lastError: () => Promise<`0x${string}`>;
+}
+
+// Function to get community score for Discord server and user
+export async function getCommunityScoreForDiscord(
+  walletClient: any,
+  discordUserId: string,
+  discordServerId: string
+): Promise<`0x${string}`> {
+  try {
+    const [account] = await walletClient.getAddresses();
+    
+    const { request } = await publicClient.simulateContract({
+      account,
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 'sendRequest',
+      args: [SUBSCRIPTION_ID, [discordUserId, discordServerId]]
+    });
+
+    const hash = await walletClient.writeContract(request);
+    return hash;
+  } catch (error) {
+    console.error('Error calling getCommunityScoreForDiscord:', error);
+    throw error;
+  }
+}
+
+// Function to get the stored community score for an address
+export async function getStoredCommunityScore(developerAddress: `0x${string}`): Promise<bigint> {
+  try {
+    const score = await publicClient.readContract({
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 'getScore',
+      args: [developerAddress]
+    });
+    return score;
+  } catch (error) {
+    console.error('Error reading community score:', error);
+    throw error;
+  }
+}
+
+// Function to get the current user from the contract
+export async function getCurrentUser(): Promise<`0x${string}`> {
+  try {
+    const user = await publicClient.readContract({
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 'currentUser'
+    });
+    return user;
+  } catch (error) {
+    console.error('Error reading current user:', error);
+    throw error;
+  }
+}
+
+// Function to get the last request ID
+export async function getLastRequestId(): Promise<`0x${string}`> {
+  try {
+    const requestId = await publicClient.readContract({
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 's_lastRequestId'
+    });
+    return requestId;
+  } catch (error) {
+    console.error('Error reading last request ID:', error);
+    throw error;
+  }
+}
+
+// Function to get the last response
+export async function getLastResponse(): Promise<`0x${string}`> {
+  try {
+    const response = await publicClient.readContract({
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 's_lastResponse'
+    });
+    return response;
+  } catch (error) {
+    console.error('Error reading last response:', error);
+    throw error;
+  }
+}
+
+// Function to get the last error
+export async function getLastError(): Promise<`0x${string}`> {
+  try {
+    const error = await publicClient.readContract({
+      address: GET_COMMUNITY_SCORE_ADDRESS,
+      abi: GET_COMMUNITY_SCORE_ABI,
+      functionName: 's_lastError'
+    });
+    return error;
+  } catch (error) {
+    console.error('Error reading last error:', error);
+    throw error;
+  }
+} 

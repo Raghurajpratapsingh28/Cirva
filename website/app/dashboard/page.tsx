@@ -10,6 +10,7 @@ import { BadgeGrid } from '@/components/BadgeGrid';
 import { SyncStatusBadge } from '@/components/SyncStatusBadge';
 import { DevScoreButton } from '@/components/DevScoreButton';
 import { SocialScoreButton } from '@/components/SocialScoreButton';
+import { CommunityScoreButton } from '@/components/CommunityScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -285,6 +286,23 @@ export default function Dashboard() {
             }));
           }}
           twitterUsername={twitterUsername}
+        />
+      </motion.div>
+
+      {/* CommunityScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <CommunityScoreButton 
+          onScoreCalculated={(score) => {
+            toast.success(`Community score calculated: ${score.toString()}`);
+            // Update the mock user profile with the new score
+            setUserProfile(prev => ({
+              ...prev,
+              reputation: {
+                ...prev.reputation,
+                contributor: Number(score)
+              }
+            }));
+          }}
         />
       </motion.div>
 
