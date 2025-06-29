@@ -12,6 +12,9 @@ import {
   getLastError
 } from '@/lib/contracts/communityScore';
 import { toast } from 'sonner';
+import { PrismaClient } from '@/lib/generated/prisma';
+
+const prisma = new PrismaClient();
 
 export interface CommunityScoreState {
   isLoading: boolean;
@@ -189,6 +192,22 @@ export function useCommunityScore() {
       console.log(`🔄 Polling attempt ${attemptsRef.current}/${maxAttempts}`);
 
       const currentScore = await getStoredCommunityScore(address);
+      console.log("currentScore: ", currentScore);
+      const communityScoreUpdateRes = await fetch('/api/user/communityscore', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          publicKey: address, 
+          score: Number(currentScore)
+        })
+      });
+
+      if (communityScoreUpdateRes.ok) {
+        const communityScoreUpdateData = await communityScoreUpdateRes.json();
+        console.log("communityScoreUpdateData: ", communityScoreUpdateData);
+      }
       const lastRequestId = await getLastRequestId();
       
       // Get additional debugging info

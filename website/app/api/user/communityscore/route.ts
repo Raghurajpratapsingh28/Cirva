@@ -126,7 +126,9 @@ export async function POST(request: NextRequest) {
 
 // PUT endpoint to sync community score from blockchain
 export async function PUT(request: NextRequest) {
-  const publicKey = request.nextUrl.searchParams.get('publicKey');
+  const body = await request.json();
+  const { publicKey, score } = body;
+
   if (!publicKey) {
     return NextResponse.json({ error: 'Missing publicKey' }, { status: 400 });
   }
@@ -134,15 +136,7 @@ export async function PUT(request: NextRequest) {
   try {
     // Get user from database
     const user = await prisma.user.findUnique({
-      where: { publicKey },
-      select: {
-        id: true,
-        publicKey: true,
-        communityScore: true,
-        discordId: true,
-        isVerifiedDiscord: true,
-        updatedAt: true,
-      },
+      where: { publicKey }
     });
 
     if (!user) {
@@ -155,35 +149,13 @@ export async function PUT(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Fetch score from blockchain
-    let blockchainScore: bigint;
-    try {
-      blockchainScore = await getStoredCommunityScore(publicKey as `0x${string}`);
-    } catch (error) {
-      console.error('Error fetching blockchain score:', error);
-      return NextResponse.json({ 
-        error: 'Failed to fetch score from blockchain' 
-      }, { status: 500 });
-    }
-
-    // Convert bigint to number (assuming score is within safe range)
-    const scoreNumber = Number(blockchainScore);
-
     // Update user's community score in database
     const updatedUser = await prisma.user.update({
       where: { publicKey },
       data: {
-        communityScore: scoreNumber,
+        communityScore: score,
         updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        publicKey: true,
-        communityScore: true,
-        discordId: true,
-        isVerifiedDiscord: true,
-        updatedAt: true,
-      },
+      }
     });
 
     return NextResponse.json({
@@ -196,7 +168,6 @@ export async function PUT(request: NextRequest) {
         isVerifiedDiscord: updatedUser.isVerifiedDiscord,
         lastUpdated: updatedUser.updatedAt,
       },
-      blockchainScore: blockchainScore.toString(),
       synced: true,
     });
   } catch (error) {
