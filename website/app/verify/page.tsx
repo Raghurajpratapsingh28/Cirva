@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { ConnectWalletButton } from '@/components/ConnectWalletButton';
@@ -107,6 +107,11 @@ export default function VerifyPage() {
   const [socialScore, setSocialScore] = useState<number | null>(null);
   const [communityScore, setCommunityScore] = useState<number | null>(null);
   const [defiScore, setDefiScore] = useState<number | null>(null);
+  const [reputation, setReputation] = useState<any>(null);
+  const [reputationLoading, setReputationLoading] = useState(false);
+  const [reputationError, setReputationError] = useState<string | null>(null);
+  const [generateLoading, setGenerateLoading] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   // Check for verification results in URL parameters
   useEffect(() => {
@@ -280,6 +285,60 @@ export default function VerifyPage() {
       setPlatforms(prev => prev.map(p => 
         p.id === platformId ? { ...p, status: 'verified' as const } : p
       ));
+    }
+  };
+
+  // Fetch reputation score for the connected wallet
+  const fetchReputation = useCallback(async () => {
+    if (!address) return;
+    setReputationLoading(true);
+    setReputationError(null);
+    try {
+      const res = await fetch(`/api/get-reputation?publicKey=${address}`);
+      const data = await res.json();
+      if (res.ok && data.reputation) {
+        setReputation(data.reputation);
+      } else {
+        setReputation(null);
+        setReputationError(data.error || 'Failed to fetch reputation');
+      }
+    } catch (err) {
+      setReputation(null);
+      setReputationError('Failed to fetch reputation');
+    } finally {
+      setReputationLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    if (address) {
+      fetchReputation();
+    }
+  }, [address, fetchReputation]);
+
+  // Generate reputation score
+  const handleGenerateReputation = async () => {
+    setGenerateLoading(true);
+    setGenerateError(null);
+    try {
+      const res = await fetch('/api/generate-reputation-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ publicKey: address }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('Reputation generated successfully!');
+        fetchReputation();
+      } else {
+        setGenerateError(data.error || 'Failed to generate reputation');
+        toast.error(data.error || 'Failed to generate reputation');
+      }
+    } catch (err) {
+      setGenerateError('Failed to generate reputation');
+      toast.error('Failed to generate reputation');
+    } finally {
+      setGenerateLoading(false);
     }
   };
 
@@ -709,6 +768,51 @@ export default function VerifyPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Reputation Generation Section */}
+      <motion.div variants={fadeInUp}>
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Reputation Score</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reputationLoading ? (
+              <div className="text-muted-foreground">Loading reputation...</div>
+            ) : reputationError ? (
+              <div className="text-red-500">{reputationError}</div>
+            ) : reputation && reputation.reputationScore != null ? (
+              <div className="space-y-2">
+                <div className="text-lg font-bold">Reputation Score: {reputation.reputationScore}</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <div>Dev Rating: <span className="font-semibold">{reputation.devRating}</span></div>
+                  <div>Community Rating: <span className="font-semibold">{reputation.communityRating}</span></div>
+                  <div>Social Rating: <span className="font-semibold">{reputation.socialRating}</span></div>
+                  <div>DeFi Rating: <span className="font-semibold">{reputation.defiRating}</span></div>
+                  <div>Overall Rating: <span className="font-semibold">{reputation.overallRating}</span></div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-muted-foreground">No reputation score found. Generate your reputation below.</div>
+            )}
+            <Button
+              className="mt-4"
+              onClick={handleGenerateReputation}
+              disabled={
+                generateLoading ||
+                reputationLoading ||
+                !!reputation?.reputationScore ||
+                !devScore || !socialScore || !communityScore || !defiScore
+              }
+            >
+              {generateLoading ? 'Generating...' : 'Generate Reputation'}
+            </Button>
+            {generateError && <div className="text-red-500 mt-2">{generateError}</div>}
+            {!devScore || !socialScore || !communityScore || !defiScore ? (
+              <div className="text-yellow-600 mt-2 text-sm">Please complete all score verifications before generating reputation.</div>
+            ) : null}
           </CardContent>
         </Card>
       </motion.div>
