@@ -9,6 +9,7 @@ import { OAuthVerificationButton } from '@/components/OAuthVerificationButton';
 import { DevScoreButton } from '@/components/DevScoreButton';
 import { SocialScoreButton } from '@/components/SocialScoreButton';
 import { CommunityScoreButton } from '@/components/CommunityScoreButton';
+import { DefiScoreButton } from '@/components/DefiScoreButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -102,6 +103,10 @@ export default function VerifyPage() {
   const [loadingAllGuilds, setLoadingAllGuilds] = useState(false);
   const [discordUserId, setDiscordUserId] = useState('');
   const [discordServerId, setDiscordServerId] = useState('');
+  const [devScore, setDevScore] = useState<number | null>(null);
+  const [socialScore, setSocialScore] = useState<number | null>(null);
+  const [communityScore, setCommunityScore] = useState<number | null>(null);
+  const [defiScore, setDefiScore] = useState<number | null>(null);
 
   // Check for verification results in URL parameters
   useEffect(() => {
@@ -251,6 +256,11 @@ export default function VerifyPage() {
             }
             return p;
           }));
+
+          setDevScore(data.devScore ?? null);
+          setSocialScore(data.socialScore ?? null);
+          setCommunityScore(data.communityScore ?? null);
+          setDefiScore(data.defiRating ?? null);
 
           // Fallback: Auto-populate Discord User ID from profile if not already set from bot-status
           if (data.discordId && !discordUserId) {
@@ -532,6 +542,7 @@ export default function VerifyPage() {
       <motion.div variants={fadeInUp}>
         <DevScoreButton 
           githubUsername={platforms.find(p => p.id === 'github')?.username}
+          score={devScore}
           onScoreCalculated={(score) => {
             toast.success(`Developer score calculated: ${score.toString()}`);
             console.log('Dev score calculated:', score.toString());
@@ -543,6 +554,7 @@ export default function VerifyPage() {
       <motion.div variants={fadeInUp}>
         <SocialScoreButton 
           twitterUsername={platforms.find(p => p.id === 'twitter')?.username}
+          score={socialScore}
           onScoreCalculated={(score) => {
             toast.success(`Social score calculated: ${score.toString()}`);
             console.log('Social score calculated:', score.toString());
@@ -645,6 +657,7 @@ export default function VerifyPage() {
             <CommunityScoreButton 
               discordUserId={discordUserId}
               discordServerId={discordServerId}
+              score={communityScore}
               onScoreCalculated={(score) => {
                 toast.success(`Community score calculated: ${score.toString()}`);
                 console.log('Community score calculated:', score.toString());
@@ -652,6 +665,17 @@ export default function VerifyPage() {
             />
           </CardContent>
         </Card>
+      </motion.div>
+
+      {/* DeFiScore Integration */}
+      <motion.div variants={fadeInUp}>
+        <DefiScoreButton 
+          score={defiScore}
+          onScoreCalculated={(score) => {
+            toast.success(`DeFi score calculated: ${score.toString()}`);
+            console.log('DeFi score calculated:', score.toString());
+          }}
+        />
       </motion.div>
 
       {/* Security Info */}
