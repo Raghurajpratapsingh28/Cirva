@@ -100,7 +100,9 @@ export function useDefiScore() {
     if (!address) return;
     attemptsRef.current += 1;
     try {
+      console.log("Polling for defi score...");
       const score = await getStoredDefiScore(address);
+      console.log("Defi score: ", score);
       if (score && score > 0n) {
         setState(prev => ({ ...prev, score, isPolling: false, isLoading: false }));
         toast.success('DeFi score updated!');
