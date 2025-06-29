@@ -80,6 +80,5 @@
   "devDependencies": {
     "pino-pretty": "^13.0.0",
     "prisma": "^6.10.1"
-  },
-  "type": "module"
+  }
 }
