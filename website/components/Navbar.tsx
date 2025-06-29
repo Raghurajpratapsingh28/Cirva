@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConnectWalletButton } from './ConnectWalletButton';
 import { DarkModeToggle } from './DarkModeToggle';
@@ -20,6 +20,8 @@ const navItems = [
 export function Navbar() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchAddress, setSearchAddress] = useState('');
+  const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -102,6 +104,29 @@ export function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              {/* Search Bar */}
+              <form
+                onSubmit={e => {
+                  e.preventDefault();
+                  if (searchAddress.trim()) {
+                    router.push(`/user/${searchAddress.trim()}`);
+                    setSearchAddress('');
+                  }
+                }}
+                className="flex items-center space-x-2 ml-4"
+              >
+                <input
+                  type="text"
+                  placeholder="Search address..."
+                  value={searchAddress}
+                  onChange={e => setSearchAddress(e.target.value)}
+                  className="px-2 py-1 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  style={{ minWidth: 180 }}
+                />
+                <Button type="submit" size="sm" variant="outline">
+                  Search
+                </Button>
+              </form>
             </div>
 
             {/* Actions */}

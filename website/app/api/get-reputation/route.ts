@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({
         publicKey: publicKey,
-        reputation: reputation
+        reputation: reputation,
+        overall: user.reputationScore
     });
   } catch (error) {
     console.error('User profile fetch error:', error);

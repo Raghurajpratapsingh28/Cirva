@@ -243,7 +243,7 @@ export function ProfileCard({ address, profile, isPublic = false }: ProfileCardP
                 >
                   {profile.reputation.overall}
                 </motion.div>
-                <div className="text-sm text-muted-foreground font-medium">Overall Score</div>
+                <div className="text-sm text-muted-foreground font-medium">Reputation Score</div>
                 <Badge 
                   variant="outline" 
                   className={cn(
