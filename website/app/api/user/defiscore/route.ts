@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         publicKey: true,
-        defiRating: true,
+        defiScore: true,
         updatedAt: true,
       },
     });
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       user: {
         publicKey: user.publicKey,
-        defiRating: user.defiRating,
+        defiScore: user.defiScore,
         lastUpdated: user.updatedAt,
       },
       blockchain: {
@@ -58,18 +58,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { publicKey, defiRating, source = 'manual' } = body;
+    const { publicKey, defiScore, source = 'manual' } = body;
 
     if (!publicKey) {
       return NextResponse.json({ error: 'Missing publicKey' }, { status: 400 });
     }
 
-    if (defiRating === undefined || defiRating === null) {
-      return NextResponse.json({ error: 'Missing defiRating' }, { status: 400 });
+    if (defiScore === undefined || defiScore === null) {
+      return NextResponse.json({ error: 'Missing defiScore' }, { status: 400 });
     }
 
-    // Validate defiRating is a number between 0 and 300
-    const scoreNumber = parseInt(defiRating);
+    // Validate defiScore is a number between 0 and 300
+    const scoreNumber = parseInt(defiScore);
     if (isNaN(scoreNumber) || scoreNumber < 0 || scoreNumber > 300) {
       return NextResponse.json({ 
         error: 'DeFi score must be a number between 0 and 300' 
@@ -80,13 +80,13 @@ export async function POST(request: NextRequest) {
     const updatedUser = await prisma.user.update({
       where: { publicKey },
       data: {
-        defiRating: scoreNumber,
+        defiScore: scoreNumber,
         updatedAt: new Date(),
       },
       select: {
         id: true,
         publicKey: true,
-        defiRating: true,
+        defiScore: true,
         updatedAt: true,
       },
     });
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       message: 'DeFi score updated successfully',
       user: {
         publicKey: updatedUser.publicKey,
-        defiRating: updatedUser.defiRating,
+        defiScore: updatedUser.defiScore,
         lastUpdated: updatedUser.updatedAt,
       },
       source,
@@ -125,7 +125,7 @@ export async function PUT(request: NextRequest) {
       select: {
         id: true,
         publicKey: true,
-        defiRating: true,
+        defiScore: true,
         updatedAt: true,
       },
     });
@@ -152,13 +152,13 @@ export async function PUT(request: NextRequest) {
     const updatedUser = await prisma.user.update({
       where: { publicKey },
       data: {
-        defiRating: scoreNumber,
+        defiScore: scoreNumber,
         updatedAt: new Date(),
       },
       select: {
         id: true,
         publicKey: true,
-        defiRating: true,
+        defiScore: true,
         updatedAt: true,
       },
     });
@@ -168,7 +168,7 @@ export async function PUT(request: NextRequest) {
       message: 'DeFi score synced from blockchain successfully',
       user: {
         publicKey: updatedUser.publicKey,
-        defiRating: updatedUser.defiRating,
+        defiScore: updatedUser.defiScore,
         lastUpdated: updatedUser.updatedAt,
       },
       blockchainScore: blockchainScore.toString(),

@@ -3,7 +3,7 @@ import { getStoredDefiScore } from '@/lib/contracts/defiScore';
 export interface DefiScoreApiResponse {
   user: {
     publicKey: string;
-    defiRating: number | null;
+    defiScore: number | null;
     lastUpdated: string;
   };
   blockchain: {
@@ -14,7 +14,7 @@ export interface DefiScoreApiResponse {
 
 export interface DefiScoreUpdateRequest {
   publicKey: string;
-  defiRating: number;
+  defiScore: number;
   source?: string;
 }
 
@@ -23,7 +23,7 @@ export interface DefiScoreUpdateResponse {
   message: string;
   user: {
     publicKey: string;
-    defiRating: number | null;
+    defiScore: number | null;
     lastUpdated: string;
   };
   source: string;
@@ -34,7 +34,7 @@ export interface DefiScoreSyncResponse {
   message: string;
   user: {
     publicKey: string;
-    defiRating: number | null;
+    defiScore: number | null;
     lastUpdated: string;
   };
   blockchainScore: string;
@@ -54,7 +54,7 @@ export async function fetchDefiScore(publicKey: string): Promise<DefiScoreApiRes
 // Update defi score via API
 export async function updateDefiScore(
   publicKey: string, 
-  defiRating: number, 
+  defiScore: number, 
   source: string = 'manual'
 ): Promise<DefiScoreUpdateResponse> {
   const response = await fetch('/api/user/defiscore', {
@@ -64,7 +64,7 @@ export async function updateDefiScore(
     },
     body: JSON.stringify({
       publicKey,
-      defiRating,
+      defiScore,
       source,
     }),
   });
@@ -107,7 +107,7 @@ export async function compareDefiScores(publicKey: string): Promise<{
   try {
     // Get database score
     const apiData = await fetchDefiScore(publicKey);
-    const databaseScore = apiData.user.defiRating;
+    const databaseScore = apiData.user.defiScore;
     // Get blockchain score
     const blockchainScore = await getBlockchainDefiScore(publicKey);
     // Compare scores
